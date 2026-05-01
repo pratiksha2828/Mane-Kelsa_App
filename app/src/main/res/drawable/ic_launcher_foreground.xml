@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- House outline -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20L20,45V85H40V65H68V85H88V45L54,20Z" />
+    <!-- Hand silhouette inside house -->
+    <path
+        android:fillColor="#FF9933"
+        android:pathData="M54,40C50,40 47,43 47,47C47,48.5 47.5,49.8 48.5,50.8L54,56L59.5,50.8C60.5,49.8 61,48.5 61,47C61,43 58,40 54,40M54,60L45,55V65L54,70L63,65V55L54,60Z" />
+</vector>

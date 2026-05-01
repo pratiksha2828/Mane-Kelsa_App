@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mane-Kelsa</string>
+
+    <!-- General -->
+    <string name="welcome">Hello 👋</string>
+    <string name="user_placeholder">User</string>
+    <string name="back">Back</string>
+    <string name="loading">Loading...</string>
+    <string name="retry">Retry</string>
+    <string name="error_prefix">Error: %s</string>
+
+    <!-- Home Screen -->
+    <string name="available_workers_today">Available Workers Today: </string>
+    <string name="complete_profile_title">Complete Your Profile</string>
+    <string name="complete_profile_desc">Fill in your details to get discovered by employers.</string>
+    <string name="featured_workers">Featured Workers</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="action_find_workers">Find Workers</string>
+    <string name="action_im_available">I\'m Available</string>
+    <string name="action_my_profile">My Profile</string>
+    <string name="action_call_history">Call History</string>
+    <string name="availability_title">Availability</string>
+    <string name="availability_desc">Let people know if you are free today.</string>
+    <string name="recent_calls_title">Recent Calls</string>
+    <string name="no_recent_calls">No recent calls yet</string>
+    <string name="view_all">View all</string>
+    <string name="role_mode_hire_title">Mode: Hiring help</string>
+    <string name="role_mode_hire_desc">Browse skilled workers nearby</string>
+    <string name="role_mode_work_title">Mode: Looking for work</string>
+    <string name="role_mode_work_desc">Stay visible to get more calls</string>
+    <string name="change_role">Change</string>
+    <string name="call_history_title">Call History</string>
+    <string name="call_history_subtitle">%1$d total calls</string>
+    <string name="clear_all">Clear All</string>
+    <string name="availability_updated">Availability updated!</string>
+    <string name="availability_update_failed">Failed to update: %1$s</string>
+    <string name="availability_reset_success">All availability reset locally</string>
+    <string name="availability_reset_failed">Reset failed: %1$s</string>
+
+    <!-- Role Selection -->
+    <string name="enter_details_title">Enter your details first</string>
+    <string name="enter_details_desc">This helps personalize your experience.</string>
+    <string name="role_title">How do you want to use Mane-Kelsa?</string>
+    <string name="role_subtitle">Pick a mode to get the right tools first.</string>
+    <string name="role_hire_title">I need help</string>
+    <string name="role_hire_desc">Find trusted helpers in your area</string>
+    <string name="role_work_title">I want to work</string>
+    <string name="role_work_desc">Create your profile and get hired</string>
+    <string name="role_continue">Continue</string>
+    <string name="next">Next</string>
+    <string name="or_only">or</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="google_sign_in_failed">Google sign-in failed. Try again.</string>
+
+    <!-- Search Screen -->
+    <string name="search_placeholder">Search by name, area, or skill...</string>
+    <string name="filter_all">All</string>
+    <string name="skill_cleaner">Cleaner</string>
+    <string name="skill_gardener">Gardener</string>
+    <string name="skill_driver">Driver</string>
+    <string name="skill_cook">Cook</string>
+    <string name="skill_caretaker">Caretaker</string>
+    <string name="skill_plumber">Plumber</string>
+    <string name="skill_electrician">Electrician</string>
+    <string name="skill_painter">Painter</string>
+    <string name="skill_carpenter">Carpenter</string>
+    <string name="skill_babysitter">Babysitter</string>
+    <string name="available_today">Available Today</string>
+    <string name="not_available">Not Available</string>
+    <string name="ratings_count">(%1$d ratings)</string>
+    <string name="per_day">/day</string>
+    <string name="no_workers_found">No workers found in your area</string>
+    <string name="call_now">Call Now</string>
+    <string name="rate_service">Rate Service</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_information">Profile Information</string>
+    <string name="label_name">Name</string>
+    <string name="label_phone_readonly">Phone Number (Read-only)</string>
+    <string name="label_area_street">Area / Street</string>
+    <string name="label_experience">Experience</string>
+    <string name="years_suffix">%1$s years</string>
+    <string name="work_details">Work Details</string>
+    <string name="skills_label">Skills (Multi-select)</string>
+    <string name="daily_wage">Daily Wage</string>
+    <string name="last_active">Last Active: %1$s</string>
+    <string name="availability_reset_info">Info: Availability status resets automatically at midnight.</string>
+    <string name="stats">Stats</string>
+    <string name="stat_jobs">Jobs</string>
+    <string name="stat_rating">Rating</string>
+    <string name="stat_calls">Calls</string>
+    <string name="settings">Settings</string>
+    <string name="language_switcher">Language Switcher</string>
+    <string name="lang_english">English</string>
+    <string name="lang_kannada">ಕನ್ನಡ</string>
+    <string name="logout">LOGOUT</string>
+    <string name="save_profile">SAVE PROFILE</string>
+    <string name="profile_updated_success">Profile Updated Successfully</string>
+
+    <!-- Auth -->
+    <string name="enter_phone">Enter Phone Number</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="verify_otp">Verify OTP</string>
+
+    <!-- Profile Form -->
+    <string name="permission_denied">Permission denied</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="worker_profile">Worker Profile</string>
+    <string name="add_photo">Add Photo</string>
+    <string name="personal_details">Personal Details</string>
+    <string name="full_name">Full Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="daily_wage_label">Daily Wage</string>
+    <string name="area_street">Area / Street</string>
+    <string name="experience_years">Experience Years</string>
+    <string name="update_profile">Update Profile</string>
+    <string name="review_profile">Review Profile</string>
+    <string name="enter_name_error">Please enter your name</string>
+    <string name="enter_phone_error">Please enter your phone number</string>
+    <string name="photo">Photo</string>
+    <string name="skills">Skills</string>
+    <string name="add_skill_label">Add a new skill</string>
+    <string name="add_skill_button">Add skill</string>
+    <string name="rate_per_hour">Rate per hour</string>
+    <string name="resident_profile">Resident Profile</string>
+    <string name="preferred_area">Preferred area</string>
+    <string name="address_label">Address</string>
+    <string name="profile_saved">Profile saved</string>
+    <string name="profile_save_failed">Failed to save profile</string>
+    <string name="map_default_pin">Search area</string>
+    <string name="preview_profile">Preview Profile</string>
+    <string name="no_photo">No photo</string>
+    <string name="edit">Edit</string>
+    <string name="save_and_continue">Save &amp; Continue</string>
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+</resources>
+
