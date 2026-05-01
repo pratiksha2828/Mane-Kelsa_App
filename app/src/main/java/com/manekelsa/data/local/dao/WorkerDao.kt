@@ -15,6 +15,9 @@ interface WorkerDao {
     @Query("UPDATE workers SET isAvailable = :isAvailable, lastUpdated = :lastUpdated WHERE id = :workerId")
     suspend fun updateAvailability(workerId: String, isAvailable: Boolean, lastUpdated: Long)
 
+    @Query("UPDATE workers SET name = :name WHERE id = :workerId")
+    suspend fun updateWorkerName(workerId: String, name: String)
+
     @Query("UPDATE workers SET isAvailable = 0, lastUpdated = :lastUpdated")
     suspend fun resetAllAvailability(lastUpdated: Long)
 
@@ -26,6 +29,9 @@ interface WorkerDao {
 
     @Query("SELECT * FROM workers")
     fun getAllWorkers(): Flow<List<WorkerEntity>>
+
+    @Query("DELETE FROM workers")
+    suspend fun deleteAllWorkers()
 
     @Delete
     suspend fun deleteWorker(worker: WorkerEntity)

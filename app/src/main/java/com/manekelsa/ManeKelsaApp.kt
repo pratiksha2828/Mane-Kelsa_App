@@ -42,7 +42,16 @@ class ManeKelsaApp : Application(), Configuration.Provider {
         val workersRef = database.reference.child("workers")
         CoroutineScope(Dispatchers.IO).launch {
             val snapshot = workersRef.get().await()
-            if (snapshot.hasChildren()) return@launch
+            if (snapshot.hasChildren()) {
+                val hasInvalidNames = snapshot.children.any { child ->
+                    val name = child.child("name").getValue(String::class.java)
+                        ?: child.child("fullName").getValue(String::class.java).orEmpty()
+                    val trimmed = name.trim()
+                    trimmed.isNotEmpty() && (trimmed.length <= 3 || trimmed.matches(Regex("^[a-z]{1,4}$")))
+                }
+                if (!hasInvalidNames) return@launch
+                workersRef.removeValue().await()
+            }
 
             val now = System.currentTimeMillis()
             val samples = listOf(
@@ -169,6 +178,90 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9887766554",
                     averageRating = 4.1f,
                     totalRatings = 9,
+                    isAvailable = true,
+                    lastUpdated = now
+                ),
+                WorkerEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = "Shobha Rao",
+                    photoUrl = null,
+                    skillsList = listOf("Cleaner", "Cook"),
+                    dailyWage = 420.0,
+                    area = "Vijayanagar",
+                    experience = 4,
+                    phoneNumber = "9011223344",
+                    averageRating = 4.4f,
+                    totalRatings = 11,
+                    isAvailable = true,
+                    lastUpdated = now
+                ),
+                WorkerEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = "Venkatesh Naik",
+                    photoUrl = null,
+                    skillsList = listOf("Electrician"),
+                    dailyWage = 620.0,
+                    area = "Vijayanagar",
+                    experience = 7,
+                    phoneNumber = "9022334455",
+                    averageRating = 4.5f,
+                    totalRatings = 15,
+                    isAvailable = true,
+                    lastUpdated = now
+                ),
+                WorkerEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = "Praveen Kumar",
+                    photoUrl = null,
+                    skillsList = listOf("Driver"),
+                    dailyWage = 650.0,
+                    area = "Koramangala",
+                    experience = 8,
+                    phoneNumber = "9344556677",
+                    averageRating = 4.2f,
+                    totalRatings = 13,
+                    isAvailable = false,
+                    lastUpdated = now
+                ),
+                WorkerEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = "Aparna Shetty",
+                    photoUrl = null,
+                    skillsList = listOf("Cook"),
+                    dailyWage = 480.0,
+                    area = "Koramangala",
+                    experience = 5,
+                    phoneNumber = "9098123456",
+                    averageRating = 4.3f,
+                    totalRatings = 17,
+                    isAvailable = true,
+                    lastUpdated = now
+                ),
+                WorkerEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = "Farah Siddiqui",
+                    photoUrl = null,
+                    skillsList = listOf("Cleaner"),
+                    dailyWage = 360.0,
+                    area = "RT Nagar",
+                    experience = 2,
+                    phoneNumber = "9988776653",
+                    averageRating = 4.0f,
+                    totalRatings = 6,
+                    isAvailable = true,
+                    lastUpdated = now
+                ),
+                WorkerEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = "Meghana Iyer",
+                    photoUrl = null,
+                    skillsList = listOf("Nurse", "Caretaker"),
+                    dailyWage = 700.0,
+                    area = "Indiranagar",
+                    experience = 8,
+                    phoneNumber = "9822001122",
+                    averageRating = 4.7f,
+                    totalRatings = 21,
                     isAvailable = true,
                     lastUpdated = now
                 )

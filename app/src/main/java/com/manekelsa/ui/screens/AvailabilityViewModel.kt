@@ -19,6 +19,7 @@ class AvailabilityViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val userId = auth.currentUser?.uid ?: ""
+    private val localAvailability = MutableStateFlow(false)
 
     init {
         if (userId.isNotEmpty()) {
@@ -26,16 +27,24 @@ class AvailabilityViewModel @Inject constructor(
         }
     }
 
-    val isAvailable: StateFlow<Boolean> = repository.getAvailability(userId)
-        .map { it ?: false }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
+    val isAvailable: StateFlow<Boolean> = if (userId.isNotEmpty()) {
+        repository.getAvailability(userId)
+            .map { it ?: false }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = false
+            )
+    } else {
+        localAvailability.asStateFlow()
+    }
 
     fun updateAvailability(context: Context, available: Boolean) {
-        if (userId.isEmpty()) return
+        if (userId.isEmpty()) {
+            localAvailability.value = available
+            Toast.makeText(context, context.getString(R.string.availability_updated), Toast.LENGTH_SHORT).show()
+            return
+        }
 
         viewModelScope.launch {
             try {

@@ -8,6 +8,7 @@ import com.google.firebase.database.ValueEventListener
 import com.manekelsa.data.local.dao.WorkerDao
 import com.manekelsa.data.local.entity.WorkerEntity
 import com.manekelsa.domain.repository.WorkerRepository
+import com.manekelsa.utils.WorkerNameNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +29,7 @@ class WorkerRepositoryImpl @Inject constructor(
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var availabilityListener: ValueEventListener? = null
+
 
     override suspend fun saveWorkerProfile(worker: WorkerEntity) {
         withContext(Dispatchers.IO) {
@@ -110,14 +112,25 @@ class WorkerRepositoryImpl @Inject constructor(
                 ?: snapshot.child("experienceYears").getValue(String::class.java)?.toIntOrNull()
                 ?: 0
             val phoneNumber = snapshot.child("phoneNumber").getValue(String::class.java) ?: ""
+            val normalizedName = WorkerNameNormalizer.normalize(name, id, phoneNumber)
             val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: false
             val averageRating = snapshot.child("averageRating").getValue(Float::class.java) ?: 0f
             val totalRatings = snapshot.child("totalRatings").getValue(Int::class.java) ?: 0
             val lastUpdated = snapshot.child("lastUpdated").getValue(Long::class.java) ?: 0L
 
+            if (id.isNotBlank() && normalizedName != name) {
+                repositoryScope.launch {
+                    firebaseDatabase.reference
+                        .child("workers")
+                        .child(id)
+                        .child("name")
+                        .setValue(normalizedName)
+                }
+            }
+
             WorkerEntity(
                 id = id,
-                name = name,
+                name = normalizedName,
                 photoUrl = photoUrl,
                 skillsList = skillsList,
                 dailyWage = dailyWage,
@@ -133,6 +146,7 @@ class WorkerRepositoryImpl @Inject constructor(
             null
         }
     }
+
 
     override suspend fun syncWorkerProfile(workerId: String) {
         withContext(Dispatchers.IO) {
@@ -219,6 +233,18 @@ class WorkerRepositoryImpl @Inject constructor(
                     ))
                 }
             }
+        }
+    }
+
+    override suspend fun clearLocalWorkers() {
+        withContext(Dispatchers.IO) {
+            workerDao.deleteAllWorkers()
+        }
+    }
+
+    override suspend fun updateLocalWorkerName(workerId: String, name: String) {
+        withContext(Dispatchers.IO) {
+            workerDao.updateWorkerName(workerId, name)
         }
     }
 

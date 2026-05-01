@@ -14,4 +14,6 @@ interface WorkerRepository {
     fun startAvailabilitySync(workerId: String)
     suspend fun resetAllAvailability()
     suspend fun rateWorker(workerId: String)
+    suspend fun clearLocalWorkers()
+    suspend fun updateLocalWorkerName(workerId: String, name: String)
 }
