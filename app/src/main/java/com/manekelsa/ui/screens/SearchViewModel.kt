@@ -16,6 +16,7 @@ data class SearchUiState(
     val selectedCategory: String = "All",
     val workers: List<WorkerEntity> = emptyList(),
     val contactedWorkerIds: Set<String> = emptySet(),
+    val hireRequests: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -30,148 +31,7 @@ class SearchViewModel @Inject constructor(
     private val _selectedCategory = MutableStateFlow("All")
     private val _error = MutableStateFlow<String?>(null)
 
-    private val fallbackWorkers: List<WorkerEntity> = listOf(
-        WorkerEntity(
-            id = "local_1",
-            name = "Shobha Rao",
-            photoUrl = null,
-            skillsList = listOf("Cleaner", "Cook"),
-            dailyWage = 420.0,
-            area = "Vijayanagar",
-            experience = 4,
-            phoneNumber = "9011223344",
-            averageRating = 4.4f,
-            totalRatings = 11,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_2",
-            name = "Venkatesh Naik",
-            photoUrl = null,
-            skillsList = listOf("Electrician"),
-            dailyWage = 620.0,
-            area = "Vijayanagar",
-            experience = 7,
-            phoneNumber = "9022334455",
-            averageRating = 4.5f,
-            totalRatings = 15,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_3",
-            name = "Bhavana Rao",
-            photoUrl = null,
-            skillsList = listOf("Babysitter", "Caretaker"),
-            dailyWage = 520.0,
-            area = "Banashankari",
-            experience = 6,
-            phoneNumber = "9122334455",
-            averageRating = 4.8f,
-            totalRatings = 19,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_4",
-            name = "Praveen Kumar",
-            photoUrl = null,
-            skillsList = listOf("Driver"),
-            dailyWage = 650.0,
-            area = "Koramangala",
-            experience = 8,
-            phoneNumber = "9344556677",
-            averageRating = 4.2f,
-            totalRatings = 13,
-            isAvailable = false,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_5",
-            name = "Aparna Shetty",
-            photoUrl = null,
-            skillsList = listOf("Cook"),
-            dailyWage = 480.0,
-            area = "Koramangala",
-            experience = 5,
-            phoneNumber = "9098123456",
-            averageRating = 4.3f,
-            totalRatings = 17,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_6",
-            name = "Sunita Devi",
-            photoUrl = null,
-            skillsList = listOf("Gardener", "Cleaner"),
-            dailyWage = 380.0,
-            area = "JP Nagar",
-            experience = 3,
-            phoneNumber = "9887766553",
-            averageRating = 4.1f,
-            totalRatings = 9,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_7",
-            name = "Iqbal Khan",
-            photoUrl = null,
-            skillsList = listOf("Plumber"),
-            dailyWage = 720.0,
-            area = "RT Nagar",
-            experience = 9,
-            phoneNumber = "9098123556",
-            averageRating = 4.3f,
-            totalRatings = 17,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_8",
-            name = "Farah Siddiqui",
-            photoUrl = null,
-            skillsList = listOf("Cleaner"),
-            dailyWage = 360.0,
-            area = "RT Nagar",
-            experience = 2,
-            phoneNumber = "9988776653",
-            averageRating = 4.0f,
-            totalRatings = 6,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_9",
-            name = "Meghana Iyer",
-            photoUrl = null,
-            skillsList = listOf("Nurse", "Caretaker"),
-            dailyWage = 700.0,
-            area = "Indiranagar",
-            experience = 8,
-            phoneNumber = "9822001122",
-            averageRating = 4.7f,
-            totalRatings = 21,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_10",
-            name = "Srinivas Reddy",
-            photoUrl = null,
-            skillsList = listOf("Painter", "Carpenter"),
-            dailyWage = 600.0,
-            area = "Whitefield",
-            experience = 7,
-            phoneNumber = "9001100223",
-            averageRating = 4.2f,
-            totalRatings = 12,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        )
-    )
+    private val fallbackWorkers: List<WorkerEntity> = com.manekelsa.data.local.MockData.fallbackWorkers
 
     private val _allWorkers = workerRepository.getAllWorkers()
         .map { workers ->
@@ -190,19 +50,32 @@ class SearchViewModel @Inject constructor(
         .map { logs -> logs.map { it.workerId }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
+    private val _hireRequests = workerRepository.getEmployerRequests("local_employer")
+        .map { requests -> requests.associate { it.workerId to it.status } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     @OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<SearchUiState> = combine(
         _searchQuery,
         _selectedCategory,
         _allWorkers,
         _contactedWorkerIds,
+        _hireRequests,
         _error
-    ) { query, category, workers, contactedIds, error ->
+    ) { params ->
+        val query = params[0] as String
+        val category = params[1] as String
+        val workers = params[2] as List<WorkerEntity>
+        val contactedIds = params[3] as Set<String>
+        val requests = params[4] as Map<String, String>
+        val error = params[5] as String?
+
         SearchUiState(
             searchQuery = query,
             selectedCategory = category,
             workers = workers,
             contactedWorkerIds = contactedIds,
+            hireRequests = requests,
             isLoading = false,
             error = error
         )
@@ -245,8 +118,13 @@ class SearchViewModel @Inject constructor(
 
             matchesQuery && matchesSkill
         }.sortedWith(
-            compareByDescending<WorkerEntity> { it.isAvailable }
-                .thenByDescending { it.averageRating }
+            compareByDescending<WorkerEntity> { worker ->
+                if (searchText.isBlank()) 0
+                else if (worker.area.equals(searchText, ignoreCase = true)) 2
+                else if (worker.area.contains(searchText, ignoreCase = true)) 1
+                else 0
+            }.thenByDescending { it.isAvailable }
+             .thenByDescending { it.averageRating }
         )
     }
 
@@ -261,6 +139,16 @@ class SearchViewModel @Inject constructor(
     fun onCallWorker(worker: WorkerEntity) {
         viewModelScope.launch {
             callLogRepository.addCallLog(worker.id, worker.name)
+        }
+    }
+
+    fun onRequestHire(workerId: String) {
+        viewModelScope.launch {
+            workerRepository.createHireRequest(
+                workerId = workerId,
+                employerId = "local_employer",
+                employerName = "Employer User"
+            )
         }
     }
 

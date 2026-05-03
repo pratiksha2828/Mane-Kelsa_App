@@ -216,7 +216,7 @@ fun WorkerProfileFormScreen(
                 OutlinedTextField(
                     value = uiState.dailyWage,
                     onValueChange = { wage -> viewModel.updateUiState { it.copy(dailyWage = wage) } },
-                    label = { Text(stringResource(R.string.rate_per_hour)) },
+                    label = { Text(stringResource(R.string.rate_per_day)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,

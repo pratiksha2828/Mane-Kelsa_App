@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.List
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.manekelsa.R
 
@@ -17,6 +18,7 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object CallHistory : Screen("call_history", R.string.action_call_history, Icons.Default.History)
     object Availability : Screen("availability", R.string.action_im_available, Icons.Default.CheckCircle)
     object ResidentProfile : Screen("resident_profile", R.string.resident_profile, Icons.Default.Person)
+    object Requests : Screen("requests", R.string.work_requests, Icons.Default.List)
 }
 
 val bottomNavItems = listOf(

@@ -11,6 +11,15 @@
     <string name="error_prefix">Error: %s</string>
 
     <!-- Home Screen -->
+    <string name="home_services_label">HOME SERVICES</string>
+    <string name="home_welcome_name">Welcome, %1$s</string>
+    <string name="home_hire_worker_title">HIRE A WORKER</string>
+    <string name="home_find_professional">Find a professional...</string>
+    <string name="home_explore_services">EXPLORE ALL SERVICES</string>
+    <string name="home_category_plumbing">Plumbing</string>
+    <string name="home_category_electrical">Electrical</string>
+    <string name="home_category_cleaning">Cleaning</string>
+    <string name="home_category_ac_service">AC Service</string>
     <string name="available_workers_today">Available Workers Today: </string>
     <string name="complete_profile_title">Complete Your Profile</string>
     <string name="complete_profile_desc">Fill in your details to get discovered by employers.</string>
@@ -22,6 +31,8 @@
     <string name="action_call_history">Call History</string>
     <string name="availability_title">Availability</string>
     <string name="availability_desc">Let people know if you are free today.</string>
+    <string name="status_available">Available</string>
+    <string name="status_busy">Busy</string>
     <string name="recent_calls_title">Recent Calls</string>
     <string name="no_recent_calls">No recent calls yet</string>
     <string name="view_all">View all</string>
@@ -56,16 +67,17 @@
     <!-- Search Screen -->
     <string name="search_placeholder">Search by name, area, or skill...</string>
     <string name="filter_all">All</string>
-    <string name="skill_cleaner">Cleaner</string>
-    <string name="skill_gardener">Gardener</string>
-    <string name="skill_driver">Driver</string>
-    <string name="skill_cook">Cook</string>
-    <string name="skill_caretaker">Caretaker</string>
-    <string name="skill_plumber">Plumber</string>
-    <string name="skill_electrician">Electrician</string>
-    <string name="skill_painter">Painter</string>
-    <string name="skill_carpenter">Carpenter</string>
-    <string name="skill_babysitter">Babysitter</string>
+    <string name="skill_cleaner">Cleaner 🧹</string>
+    <string name="skill_gardener">Gardener 🌿</string>
+    <string name="skill_driver">Driver 🚗</string>
+    <string name="skill_cook">Cook 🍳</string>
+    <string name="skill_caretaker">Caretaker 🫂</string>
+    <string name="skill_plumber">Plumber 🔧</string>
+    <string name="skill_electrician">Electrician ⚡</string>
+    <string name="skill_painter">Painter 🎨</string>
+    <string name="skill_carpenter">Carpenter 🪚</string>
+    <string name="skill_babysitter">Babysitter 🍼</string>
+    <string name="skill_nurse">Nurse 🩺</string>
     <string name="available_today">Available Today</string>
     <string name="not_available">Not Available</string>
     <string name="ratings_count">(%1$d ratings)</string>
@@ -73,6 +85,7 @@
     <string name="no_workers_found">No workers found in your area</string>
     <string name="call_now">Call Now</string>
     <string name="rate_service">Rate Service</string>
+    <string name="rate_employed_only">You can only rate workers you have employed.</string>
 
     <!-- Profile Screen -->
     <string name="profile_information">Profile Information</string>
@@ -122,17 +135,36 @@
     <string name="skills">Skills</string>
     <string name="add_skill_label">Add a new skill</string>
     <string name="add_skill_button">Add skill</string>
-    <string name="rate_per_hour">Rate per hour</string>
+    <string name="rate_per_day">Rate per day</string>
     <string name="resident_profile">Resident Profile</string>
     <string name="preferred_area">Preferred area</string>
     <string name="address_label">Address</string>
     <string name="profile_saved">Profile saved</string>
     <string name="profile_save_failed">Failed to save profile</string>
-    <string name="map_default_pin">Search area</string>
+    <string name="map_default_pin">You are here</string>
+
+    <!-- Hire Request Strings -->
+    <string name="action_request_hire">Request Hire</string>
+    <string name="status_requested">Requested</string>
+    <string name="status_hired">Hired</string>
+    <string name="status_declined">Declined</string>
     <string name="preview_profile">Preview Profile</string>
     <string name="no_photo">No photo</string>
     <string name="edit">Edit</string>
     <string name="save_and_continue">Save &amp; Continue</string>
     <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
-</resources>
+    <string name="tap_to_proceed">Tap here to proceed -></string>
 
+    <!-- Reviews and Request Actions -->
+    <string name="review_1">"Very professional and punctual. Did a great job."</string>
+    <string name="review_2">"Highly recommended! Very polite and efficient."</string>
+    <string name="review_3">"Good work, completed everything on time."</string>
+    <string name="review_4">"Exceptional service! Very knowledgeable and quick."</string>
+    <string name="review_5">"Polite behavior and excellent work quality. Will hire again."</string>
+    <string name="reviews_title">Reviews</string>
+    <string name="requested_your_service">%1$s requested your service.</string>
+    <string name="action_accept">Accept</string>
+    <string name="action_reject">Reject</string>
+    <string name="work_requests">Work Requests</string>
+    <string name="no_active_requests">No active requests at the moment.</string>
+</resources>

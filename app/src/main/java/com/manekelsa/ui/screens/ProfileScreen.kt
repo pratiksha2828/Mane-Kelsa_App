@@ -37,8 +37,13 @@ import com.manekelsa.ui.model.SkillOption
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    displayName: String = "",
+    phoneNumber: String = "",
     viewModel: WorkerProfileViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(displayName, phoneNumber) {
+        viewModel.setInitialContactInfo(displayName, phoneNumber)
+    }
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -99,8 +104,7 @@ fun ProfileScreen(
             // SECTION 2: WORK DETAILS
             WorkDetailsSection(uiState, viewModel)
 
-            // SECTION 3: AVAILABILITY
-            AvailabilitySection(uiState, onToggle = { viewModel.toggleAvailability(it) })
+            // SECTION 3: (Removed Availability)
 
             // SECTION 4: STATS
             StatsSection(uiState)
@@ -261,7 +265,7 @@ fun WorkDetailsSection(uiState: WorkerProfileUiState, viewModel: WorkerProfileVi
         OutlinedTextField(
             value = uiState.dailyWage,
             onValueChange = { wage -> viewModel.updateUiState { it.copy(dailyWage = wage) } },
-            label = { Text(stringResource(R.string.rate_per_hour)) },
+            label = { Text(stringResource(R.string.rate_per_day)) },
             prefix = { Text("₹") },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -316,6 +320,7 @@ fun StatsSection(uiState: WorkerProfileUiState) {
         }
     }
 }
+
 
 @Composable
 fun StatCard(label: String, value: String, icon: ImageVector, modifier: Modifier) {

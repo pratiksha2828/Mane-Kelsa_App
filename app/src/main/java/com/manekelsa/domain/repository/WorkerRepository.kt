@@ -16,4 +16,9 @@ interface WorkerRepository {
     suspend fun rateWorker(workerId: String)
     suspend fun clearLocalWorkers()
     suspend fun updateLocalWorkerName(workerId: String, name: String)
+    suspend fun createHireRequest(workerId: String, employerId: String, employerName: String)
+    fun getAllHireRequests(): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>>
+    fun getWorkerRequests(workerId: String): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>>
+    fun getEmployerRequests(employerId: String): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>>
+    suspend fun updateRequestStatus(requestId: String, status: String)
 }

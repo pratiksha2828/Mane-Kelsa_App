@@ -13,9 +13,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class EmployerRequestUiModel(
+    val id: String,
+    val workerId: String,
+    val workerName: String,
+    val status: String,
+    val timestamp: Long
+)
 
 data class HomeUiState(
     val userName: String? = null,
@@ -23,6 +32,8 @@ data class HomeUiState(
     val availableWorkersCount: Int = 0,
     val featuredWorkers: List<WorkerEntity> = emptyList(),
     val recentCalls: List<CallLogEntity> = emptyList(),
+    val pendingRequests: List<com.manekelsa.data.local.entity.HireRequestEntity> = emptyList(),
+    val employerRequests: List<EmployerRequestUiModel> = emptyList(),
     val isLoading: Boolean = true
 )
 
@@ -36,152 +47,13 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private var mockRequestGenerated = false
+
     init {
         loadData()
     }
 
-    private val fallbackWorkers: List<WorkerEntity> = listOf(
-        WorkerEntity(
-            id = "local_1",
-            name = "Shobha Rao",
-            photoUrl = null,
-            skillsList = listOf("Cleaner", "Cook"),
-            dailyWage = 420.0,
-            area = "Vijayanagar",
-            experience = 4,
-            phoneNumber = "9011223344",
-            averageRating = 4.4f,
-            totalRatings = 11,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_2",
-            name = "Venkatesh Naik",
-            photoUrl = null,
-            skillsList = listOf("Electrician"),
-            dailyWage = 620.0,
-            area = "Vijayanagar",
-            experience = 7,
-            phoneNumber = "9022334455",
-            averageRating = 4.5f,
-            totalRatings = 15,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_3",
-            name = "Bhavana Rao",
-            photoUrl = null,
-            skillsList = listOf("Babysitter", "Caretaker"),
-            dailyWage = 520.0,
-            area = "Banashankari",
-            experience = 6,
-            phoneNumber = "9122334455",
-            averageRating = 4.8f,
-            totalRatings = 19,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_4",
-            name = "Praveen Kumar",
-            photoUrl = null,
-            skillsList = listOf("Driver"),
-            dailyWage = 650.0,
-            area = "Koramangala",
-            experience = 8,
-            phoneNumber = "9344556677",
-            averageRating = 4.2f,
-            totalRatings = 13,
-            isAvailable = false,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_5",
-            name = "Aparna Shetty",
-            photoUrl = null,
-            skillsList = listOf("Cook"),
-            dailyWage = 480.0,
-            area = "Koramangala",
-            experience = 5,
-            phoneNumber = "9098123456",
-            averageRating = 4.3f,
-            totalRatings = 17,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_6",
-            name = "Sunita Devi",
-            photoUrl = null,
-            skillsList = listOf("Gardener", "Cleaner"),
-            dailyWage = 380.0,
-            area = "JP Nagar",
-            experience = 3,
-            phoneNumber = "9887766553",
-            averageRating = 4.1f,
-            totalRatings = 9,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_7",
-            name = "Iqbal Khan",
-            photoUrl = null,
-            skillsList = listOf("Plumber"),
-            dailyWage = 720.0,
-            area = "RT Nagar",
-            experience = 9,
-            phoneNumber = "9098123556",
-            averageRating = 4.3f,
-            totalRatings = 17,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_8",
-            name = "Farah Siddiqui",
-            photoUrl = null,
-            skillsList = listOf("Cleaner"),
-            dailyWage = 360.0,
-            area = "RT Nagar",
-            experience = 2,
-            phoneNumber = "9988776653",
-            averageRating = 4.0f,
-            totalRatings = 6,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_9",
-            name = "Meghana Iyer",
-            photoUrl = null,
-            skillsList = listOf("Nurse", "Caretaker"),
-            dailyWage = 700.0,
-            area = "Indiranagar",
-            experience = 8,
-            phoneNumber = "9822001122",
-            averageRating = 4.7f,
-            totalRatings = 21,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        ),
-        WorkerEntity(
-            id = "local_10",
-            name = "Srinivas Reddy",
-            photoUrl = null,
-            skillsList = listOf("Painter", "Carpenter"),
-            dailyWage = 600.0,
-            area = "Whitefield",
-            experience = 7,
-            phoneNumber = "9001100223",
-            averageRating = 4.2f,
-            totalRatings = 12,
-            isAvailable = true,
-            lastUpdated = System.currentTimeMillis()
-        )
-    )
+    private val fallbackWorkers: List<WorkerEntity> = com.manekelsa.data.local.MockData.fallbackWorkers
 
     private fun loadData() {
         val currentUser = auth.currentUser
@@ -227,6 +99,43 @@ class HomeViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(recentCalls = logs)
                 }
             }
+
+            launch {
+                workerRepository.getAllHireRequests().collectLatest { requests ->
+                    val workers = workerRepository.getAllWorkers().firstOrNull() ?: fallbackWorkers
+                    val empRequests = requests
+                        .filter { it.employerId == "local_employer" }
+                        .mapNotNull { req -> 
+                            val worker = workers.find { it.id == req.workerId } ?: fallbackWorkers.find { it.id == req.workerId }
+                            if (worker != null) {
+                                EmployerRequestUiModel(req.id, worker.id, worker.name, req.status, req.timestamp)
+                            } else null
+                        }
+
+                    _uiState.value = _uiState.value.copy(
+                        pendingRequests = requests.filter { it.status == "PENDING" && it.workerId == uid },
+                        employerRequests = empRequests
+                    )
+
+                    if (uid != null && _uiState.value.isProfileComplete) {
+                        val hasRequests = requests.any { it.workerId == uid }
+                        if (!hasRequests && !mockRequestGenerated) {
+                            mockRequestGenerated = true
+                            viewModelScope.launch {
+                                workerRepository.createHireRequest(uid, "mock_employer", "Arun Kumar")
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    fun acceptRequest(requestId: String) {
+        viewModelScope.launch { workerRepository.updateRequestStatus(requestId, "ACCEPTED") }
+    }
+
+    fun rejectRequest(requestId: String) {
+        viewModelScope.launch { workerRepository.updateRequestStatus(requestId, "REJECTED") }
     }
 }

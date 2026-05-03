@@ -15,6 +15,7 @@ object SkillOption {
     const val PAINTER = "Painter"
     const val CARPENTER = "Carpenter"
     const val BABYSITTER = "Babysitter"
+    const val NURSE = "Nurse"
 
     val all = listOf(
         CLEANER,
@@ -26,7 +27,8 @@ object SkillOption {
         ELECTRICIAN,
         PAINTER,
         CARPENTER,
-        BABYSITTER
+        BABYSITTER,
+        NURSE
     )
 
     @StringRes
@@ -41,6 +43,7 @@ object SkillOption {
         PAINTER -> R.string.skill_painter
         CARPENTER -> R.string.skill_carpenter
         BABYSITTER -> R.string.skill_babysitter
+        NURSE -> R.string.skill_nurse
         else -> null
     }
 
@@ -57,6 +60,7 @@ object SkillOption {
             "Painter", "ಬಣ್ಣಗಾರ" -> PAINTER
             "Carpenter", "ಕಾರ್ಪೆಂಟರ್" -> CARPENTER
             "Babysitter", "ಮಕ್ಕಳ ಪಾಲಕ" -> BABYSITTER
+            "Nurse", "ನರ್ಸ್" -> NURSE
             else -> trimmed
         }
     }

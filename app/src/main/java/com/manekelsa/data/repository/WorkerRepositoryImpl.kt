@@ -24,7 +24,8 @@ import javax.inject.Singleton
 @Singleton
 class WorkerRepositoryImpl @Inject constructor(
     private val workerDao: WorkerDao,
-    private val firebaseDatabase: FirebaseDatabase
+    private val firebaseDatabase: FirebaseDatabase,
+    private val hireRequestDao: com.manekelsa.data.local.dao.HireRequestDao
 ) : WorkerRepository {
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -116,6 +117,7 @@ class WorkerRepositoryImpl @Inject constructor(
             val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: false
             val averageRating = snapshot.child("averageRating").getValue(Float::class.java) ?: 0f
             val totalRatings = snapshot.child("totalRatings").getValue(Int::class.java) ?: 0
+            val likes = snapshot.child("likes").getValue(Int::class.java) ?: 0
             val lastUpdated = snapshot.child("lastUpdated").getValue(Long::class.java) ?: 0L
 
             if (id.isNotBlank() && normalizedName != name) {
@@ -139,6 +141,7 @@ class WorkerRepositoryImpl @Inject constructor(
                 phoneNumber = phoneNumber,
                 averageRating = averageRating,
                 totalRatings = totalRatings,
+                likes = likes,
                 isAvailable = isAvailable,
                 lastUpdated = lastUpdated
             )
@@ -254,5 +257,37 @@ class WorkerRepositoryImpl @Inject constructor(
             .child(worker.id)
             .setValue(worker)
             .await()
+    }
+
+    override suspend fun createHireRequest(workerId: String, employerId: String, employerName: String) {
+        val request = com.manekelsa.data.local.entity.HireRequestEntity(
+            id = java.util.UUID.randomUUID().toString(),
+            workerId = workerId,
+            employerId = employerId,
+            employerName = employerName,
+            status = "PENDING",
+            timestamp = System.currentTimeMillis()
+        )
+        withContext(Dispatchers.IO) {
+            hireRequestDao.insertRequest(request)
+        }
+    }
+
+    override fun getAllHireRequests(): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>> {
+        return hireRequestDao.getAllHireRequests()
+    }
+
+    override fun getWorkerRequests(workerId: String): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>> {
+        return hireRequestDao.getRequestsForWorker(workerId)
+    }
+
+    override fun getEmployerRequests(employerId: String): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>> {
+        return hireRequestDao.getRequestsForEmployer(employerId)
+    }
+
+    override suspend fun updateRequestStatus(requestId: String, status: String) {
+        withContext(Dispatchers.IO) {
+            hireRequestDao.updateRequestStatus(requestId, status)
+        }
     }
 }

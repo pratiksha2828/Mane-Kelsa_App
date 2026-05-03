@@ -11,9 +11,12 @@ import com.manekelsa.data.local.entity.Converters
 import com.manekelsa.data.local.entity.PendingSync
 import com.manekelsa.data.local.entity.WorkerEntity
 
+import com.manekelsa.data.local.entity.HireRequestEntity
+import com.manekelsa.data.local.dao.HireRequestDao
+
 @Database(
-    entities = [WorkerEntity::class, PendingSync::class, CallLogEntity::class],
-    version = 3,
+    entities = [WorkerEntity::class, PendingSync::class, CallLogEntity::class, HireRequestEntity::class],
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -21,4 +24,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workerDao(): WorkerDao
     abstract fun pendingSyncDao(): PendingSyncDao
     abstract fun callLogDao(): CallLogDao
+    abstract fun hireRequestDao(): HireRequestDao
 }

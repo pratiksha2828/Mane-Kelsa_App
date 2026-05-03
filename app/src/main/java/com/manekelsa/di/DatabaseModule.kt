@@ -43,4 +43,9 @@ object DatabaseModule {
     fun provideCallLogDao(database: AppDatabase): CallLogDao {
         return database.callLogDao()
     }
+
+    @Provides
+    fun provideHireRequestDao(database: AppDatabase): com.manekelsa.data.local.dao.HireRequestDao {
+        return database.hireRequestDao()
+    }
 }

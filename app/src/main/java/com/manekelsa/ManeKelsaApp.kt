@@ -66,6 +66,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9876543210",
                     averageRating = 4.6f,
                     totalRatings = 12,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -80,6 +81,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9123456780",
                     averageRating = 4.4f,
                     totalRatings = 18,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -94,6 +96,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9988776655",
                     averageRating = 4.7f,
                     totalRatings = 22,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -108,6 +111,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9001122334",
                     averageRating = 4.5f,
                     totalRatings = 16,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -122,6 +126,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9090909090",
                     averageRating = 4.8f,
                     totalRatings = 30,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -136,6 +141,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9812345678",
                     averageRating = 4.3f,
                     totalRatings = 20,
+                    likes = 0,
                     isAvailable = false,
                     lastUpdated = now
                 ),
@@ -150,6 +156,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9345678901",
                     averageRating = 4.9f,
                     totalRatings = 28,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -164,6 +171,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9900112233",
                     averageRating = 4.2f,
                     totalRatings = 14,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -178,6 +186,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9887766554",
                     averageRating = 4.1f,
                     totalRatings = 9,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -192,6 +201,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9011223344",
                     averageRating = 4.4f,
                     totalRatings = 11,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -206,6 +216,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9022334455",
                     averageRating = 4.5f,
                     totalRatings = 15,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -220,6 +231,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9344556677",
                     averageRating = 4.2f,
                     totalRatings = 13,
+                    likes = 0,
                     isAvailable = false,
                     lastUpdated = now
                 ),
@@ -234,6 +246,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9098123456",
                     averageRating = 4.3f,
                     totalRatings = 17,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -248,6 +261,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9988776653",
                     averageRating = 4.0f,
                     totalRatings = 6,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 ),
@@ -262,6 +276,7 @@ class ManeKelsaApp : Application(), Configuration.Provider {
                     phoneNumber = "9822001122",
                     averageRating = 4.7f,
                     totalRatings = 21,
+                    likes = 0,
                     isAvailable = true,
                     lastUpdated = now
                 )

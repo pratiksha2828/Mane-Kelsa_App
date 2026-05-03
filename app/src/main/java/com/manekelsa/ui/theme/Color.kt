@@ -2,22 +2,22 @@ package com.manekelsa.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary: Saffron Orange (Warm & Inviting)
-val SaffronPrimary = Color(0xFFFF9933)
-val SaffronDark = Color(0xFFC66900)
-val SaffronLight = Color(0xFFFFCC66)
+// Primary: Glacier Blue (Clean & Trustworthy)
+val SaffronPrimary = Color(0xFF78B7FF)
+val SaffronDark = Color(0xFF2E5F93)
+val SaffronLight = Color(0xFFC8E1FF)
 
-// Secondary: Deep Green (Reliability & Growth)
-val DeepGreenSecondary = Color(0xFF006400)
-val DeepGreenDark = Color(0xFF003300)
-val DeepGreenLight = Color(0xFF399331)
+// Secondary: Seafoam Teal (Friendly & Fresh)
+val DeepGreenSecondary = Color(0xFF4FC7B3)
+val DeepGreenDark = Color(0xFF237E6F)
+val DeepGreenLight = Color(0xFFA8E7DA)
 
-// Background/Surface: Cream White (Soft & Clean)
-val CreamWhite = Color(0xFFFFFDD0)
-val SoftGrey = Color(0xFFF5F5F5)
+// Background/Surface: Cloudy Blue-White (Soft & Airy)
+val CreamWhite = Color(0xFFF2F6FD)
+val SoftGrey = Color(0xFFF8FAFE)
 
 // High Contrast Text
-val TextDark = Color(0xFF1C1B1F)
+val TextDark = Color(0xFF1A2433)
 val TextLight = Color(0xFFFFFFFF)
 
 // Accessibility colors

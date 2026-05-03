@@ -19,6 +19,7 @@ data class WorkerEntity(
     val phoneNumber: String,
     val averageRating: Float,
     val totalRatings: Int,
+    val likes: Int,
     val isAvailable: Boolean,
     val lastUpdated: Long
 )

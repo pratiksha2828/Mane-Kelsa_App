@@ -11,6 +11,15 @@
     <string name="error_prefix">ದೋಷ: %s</string>
 
     <!-- Home Screen -->
+    <string name="home_services_label">ಮನೆ ಸೇವೆಗಳು</string>
+    <string name="home_welcome_name">ಸ್ವಾಗತ, %1$s</string>
+    <string name="home_hire_worker_title">ಕಾರ್ಮಿಕರನ್ನು ನೇಮಿಸಿ</string>
+    <string name="home_find_professional">ವೃತ್ತಿಪರರನ್ನು ಹುಡುಕಿ...</string>
+    <string name="home_explore_services">ಎಲ್ಲಾ ಸೇವೆಗಳು ನೋಡಿ</string>
+    <string name="home_category_plumbing">ಪ್ಲಂಬಿಂಗ್</string>
+    <string name="home_category_electrical">ಇಲೆಕ್ಟ್ರಿಕಲ್</string>
+    <string name="home_category_cleaning">ಸ್ವಚ್ಛತೆ</string>
+    <string name="home_category_ac_service">ಎಸಿ ಸೇವೆ</string>
     <string name="available_workers_today">ಇಂದು ಲಭ್ಯವಿರುವ ಕಾರ್ಮಿಕರು: </string>
     <string name="complete_profile_title">ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ</string>
     <string name="complete_profile_desc">ಉದ್ಯೋಗದಾರರಿಗೆ ಕಂಡುಬರಲು ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ.</string>
@@ -22,6 +31,8 @@
     <string name="action_call_history">ಕರೆ ಇತಿಹಾಸ</string>
     <string name="availability_title">ಲಭ್ಯತೆ</string>
     <string name="availability_desc">ಇಂದು ನೀವು ಲಭ್ಯವಿದ್ದೀರಾ ಎಂಬುದನ್ನು ತಿಳಿಸಿ.</string>
+    <string name="status_available">ಇಂದು ಲಭ್ಯ</string>
+    <string name="status_busy">ಕಾರ್ಯಮಗ್ನ</string>
     <string name="recent_calls_title">ಇತ್ತೀಚಿನ ಕರೆಗಳು</string>
     <string name="no_recent_calls">ಇನ್ನೂ ಇತ್ತೀಚಿನ ಕರೆಗಳಿಲ್ಲ</string>
     <string name="view_all">ಎಲ್ಲವನ್ನು ನೋಡಿ</string>
@@ -56,16 +67,17 @@
     <!-- Search Screen -->
     <string name="search_placeholder">ಹೆಸರು, ಪ್ರದೇಶ ಅಥವಾ ಕೌಶಲ್ಯ ಮೂಲಕ ಹುಡುಕಿ...</string>
     <string name="filter_all">ಎಲ್ಲಾ</string>
-    <string name="skill_cleaner">ಸ್ವಚ್ಛತೆ</string>
-    <string name="skill_gardener">ತೋಟಗಾರ</string>
-    <string name="skill_driver">ಡ್ರೈವರ್</string>
-    <string name="skill_cook">ಅಡುಗೆಗಾರ</string>
-    <string name="skill_caretaker">ಪಾಲಕ</string>
-    <string name="skill_plumber">ಪ್ಲಂಬರ್</string>
-    <string name="skill_electrician">ಇಲೆಕ್ಟ್ರಿಷಿಯನ್</string>
-    <string name="skill_painter">ಬಣ್ಣಗಾರ</string>
-    <string name="skill_carpenter">ಕಾರ್ಪೆಂಟರ್</string>
-    <string name="skill_babysitter">ಮಕ್ಕಳ ಪಾಲಕ</string>
+    <string name="skill_cleaner">ಸ್ವಚ್ಛತೆ 🧹</string>
+    <string name="skill_gardener">ತೋಟಗಾರ 🌿</string>
+    <string name="skill_driver">ಡ್ರೈವರ್ 🚗</string>
+    <string name="skill_cook">ಅಡುಗೆಗಾರ 🍳</string>
+    <string name="skill_caretaker">ಪಾಲಕ 🫂</string>
+    <string name="skill_plumber">ಪ್ಲಂಬರ್ 🔧</string>
+    <string name="skill_electrician">ಇಲೆಕ್ಟ್ರಿಷಿಯನ್ ⚡</string>
+    <string name="skill_painter">ಬಣ್ಣಗಾರ 🎨</string>
+    <string name="skill_carpenter">ಕಾರ್ಪೆಂಟರ್ 🪚</string>
+    <string name="skill_babysitter">ಮಕ್ಕಳ ಪಾಲಕ 🍼</string>
+    <string name="skill_nurse">ನರ್ಸ್ 🩺</string>
     <string name="available_today">ಇಂದು ಲಭ್ಯ</string>
     <string name="not_available">ಲಭ್ಯವಿಲ್ಲ</string>
     <string name="ratings_count">(%1$d ಮೌಲ್ಯಮಾಪನಗಳು)</string>
@@ -73,6 +85,7 @@
     <string name="no_workers_found">ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ಕಾರ್ಮಿಕರು ಕಂಡುಬಂದಿಲ್ಲ</string>
     <string name="call_now">ಇದೀಗ ಕರೆ ಮಾಡಿ</string>
     <string name="rate_service">ಸೇವೆಗೆ ಮೌಲ್ಯಮಾಪನ</string>
+    <string name="rate_employed_only">ನೀವು ಕೆಲಸಕ್ಕೆ ನಿಯೋಜಿಸಿದ ಕಾರ್ಮಿಕರನ್ನು ಮಾತ್ರ ಮೌಲ್ಯಮಾಪನ ಮಾಡಬಹುದು.</string>
 
     <!-- Profile Screen -->
     <string name="profile_information">ಪ್ರೊಫೈಲ್ ಮಾಹಿತಿ</string>
@@ -133,4 +146,24 @@
     <string name="no_photo">ಫೋಟೋ ಇಲ್ಲ</string>
     <string name="edit">ತಿದ್ದು</string>
     <string name="save_and_continue">ಉಳಿಸಿ ಮತ್ತು ಮುಂದುವರಿಸಿ</string>
+
+    <!-- Hire Request Strings -->
+    <string name="action_request_hire">ಕೇಳಿಕೆ ಕಳುಹಿಸಿ</string>
+    <string name="status_requested">ಕೇಳಲಾಗಿದೆ</string>
+    <string name="status_hired">ನೇಮಿಸಲಾಗಿದೆ</string>
+    <string name="status_declined">ತಿರಸ್ಕರಿಸಲಾಗಿದೆ</string>
+    <string name="tap_to_proceed">ಮುಂದುವರಿಯಲು ಇಲ್ಲಿ ಒತ್ತಿ -></string>
+
+    <!-- Reviews and Request Actions -->
+    <string name="review_1">"ತುಂಬಾ ವೃತ್ತಿಪರ ಮತ್ತು ಸಮಯಪ್ರಜ್ಞೆ ಉಳ್ಳವರು. ಉತ್ತಮ ಕೆಲಸ."</string>
+    <string name="review_2">"ಶಿಫಾರಸು ಮಾಡುತ್ತೇವೆ! ತುಂಬಾ ಸಭ್ಯ ಮತ್ತು ಸಮರ್ಥರು."</string>
+    <string name="review_3">"ಒಳ್ಳೆಯ ಕೆಲಸ, ಎಲ್ಲವನ್ನೂ ಸಮಯಕ್ಕೆ ಪೂರ್ಣಗೊಳಿಸಿದ್ದಾರೆ."</string>
+    <string name="review_4">"ಅಸಾಧಾರಣ ಸೇವೆ! ತುಂಬಾ ಜ್ಞಾನವುಳ್ಳವರು ಮತ್ತು ವೇಗವಾಗಿದ್ದಾರೆ."</string>
+    <string name="review_5">"ಸಭ್ಯ ವರ್ತನೆ ಮತ್ತು ಅತ್ಯುತ್ತಮ ಕೆಲಸದ ಗುಣಮಟ್ಟ. ಮತ್ತೆ ನೇಮಿಸಿಕೊಳ್ಳುವೆ."</string>
+    <string name="reviews_title">ವಿಮರ್ಶೆಗಳು</string>
+    <string name="requested_your_service">%1$s ನಿಮ್ಮ ಸೇವೆಯನ್ನು ವಿನಂತಿಸಿದ್ದಾರೆ.</string>
+    <string name="action_accept">ಒಪ್ಪಿಕೊಳ್ಳಿ</string>
+    <string name="action_reject">ತಿರಸ್ಕರಿಸಿ</string>
+    <string name="work_requests">ಕೆಲಸದ ವಿನಂತಿಗಳು</string>
+    <string name="no_active_requests">ಪ್ರಸ್ತುತ ಯಾವುದೇ ಸಕ್ರಿಯ ವಿನಂತಿಗಳಿಲ್ಲ.</string>
 </resources>

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.manekelsa.R
+import com.manekelsa.utils.TranslationUtils
 
 @Composable
 fun CallHistoryScreen(viewModel: CallHistoryViewModel = hiltViewModel()) {
@@ -106,7 +107,7 @@ fun CallHistoryScreen(viewModel: CallHistoryViewModel = hiltViewModel()) {
                             }
                             Column(modifier = Modifier.padding(start = 12.dp)) {
                                 Text(
-                                    text = call.workerName,
+                                    text = TranslationUtils.getTranslatedName(call.workerName),
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                                 )
                                 Text(

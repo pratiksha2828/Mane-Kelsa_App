@@ -37,6 +37,7 @@ data class WorkerProfileUiState(
     val lastActive: String = "Never",
     val totalJobs: Int = 0,
     val averageRating: Float = 0f,
+    val likes: Int = 0,
     val timesContacted: Int = 0,
     val currentLanguage: String = "en",
     val isEditMode: Boolean = false,
@@ -98,6 +99,7 @@ class WorkerProfileViewModel @Inject constructor(
             lastActive = formatTimestamp(worker.lastUpdated),
             totalJobs = worker.totalRatings,
             averageRating = worker.averageRating,
+            likes = worker.likes,
             isEditMode = true
         ) }
     }
@@ -112,6 +114,15 @@ class WorkerProfileViewModel @Inject constructor(
 
     fun updateUiState(reducer: (WorkerProfileUiState) -> WorkerProfileUiState) {
         _uiState.update(reducer)
+    }
+
+    fun setInitialContactInfo(name: String, phone: String) {
+        if (_uiState.value.fullName.isEmpty() && name.isNotEmpty()) {
+            _uiState.update { it.copy(fullName = name) }
+        }
+        if (_uiState.value.phoneNumber.isEmpty() && phone.isNotEmpty()) {
+            _uiState.update { it.copy(phoneNumber = phone) }
+        }
     }
 
     fun toggleAvailability(isAvailable: Boolean) {
@@ -164,6 +175,7 @@ class WorkerProfileViewModel @Inject constructor(
                     phoneNumber = currentState.phoneNumber,
                     averageRating = currentState.averageRating,
                     totalRatings = currentState.totalJobs,
+                    likes = currentState.likes,
                     isAvailable = currentState.isAvailable,
                     lastUpdated = System.currentTimeMillis()
                 )

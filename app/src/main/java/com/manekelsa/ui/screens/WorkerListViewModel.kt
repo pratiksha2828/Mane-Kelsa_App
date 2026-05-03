@@ -66,6 +66,12 @@ class WorkerListViewModel @Inject constructor(
 
     val workers: StateFlow<List<WorkerEntity>> = combine(
         repository.getRemoteWorkers()
+            .map { workers ->
+                workers.map { worker ->
+                    val normalizedName = com.manekelsa.utils.WorkerNameNormalizer.normalize(worker.name, worker.id, worker.phoneNumber)
+                    worker.copy(name = normalizedName)
+                }
+            }
             .onStart { 
                 _isLoading.value = true 
                 _error.value = null

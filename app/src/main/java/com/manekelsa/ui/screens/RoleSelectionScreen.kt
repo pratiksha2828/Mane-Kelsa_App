@@ -12,6 +12,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HomeRepairService
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import com.manekelsa.R
+import com.manekelsa.ui.components.glassmorphism
 import com.manekelsa.ui.model.UserRole
 import com.manekelsa.utils.LocalizationManager
 
@@ -103,147 +106,162 @@ fun RoleSelectionScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .widthIn(max = 500.dp)
+                .fillMaxWidth()
+                .systemBarsPadding()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "M",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "M",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                LanguageToggle(
+                    languageCode = languageCode,
+                    onLanguageChange = { newCode ->
+                        if (newCode != languageCode) {
+                            LocalizationManager.setLanguage(newCode)
+                            languageCode = newCode
+                            activity?.recreate()
+                        }
+                    }
                 )
             }
-            LanguageToggle(
-                languageCode = languageCode,
-                onLanguageChange = { newCode ->
-                    if (newCode != languageCode) {
-                        LocalizationManager.setLanguage(newCode)
-                        languageCode = newCode
-                        activity?.recreate()
+
+            androidx.compose.animation.Crossfade(
+                targetState = detailsSubmitted,
+                label = "role_selection_step"
+            ) { isSubmitted ->
+                if (!isSubmitted) {
+                    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Text(
+                            text = stringResource(R.string.enter_details_title),
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = stringResource(R.string.enter_details_desc),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedTextField(
+                            value = fullName,
+                            onValueChange = { fullName = it },
+                            label = { Text(stringResource(R.string.full_name)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = phoneNumber,
+                            onValueChange = { phoneNumber = it },
+                            label = { Text(stringResource(R.string.phone_number)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        val phoneDigits = phoneNumber.filter { it.isDigit() }
+                        val hasIdentity = fullName.isNotBlank() && phoneDigits.length >= 10
+                        Button(
+                            onClick = { detailsSubmitted = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            enabled = hasIdentity
+                        ) {
+                            Text(text = stringResource(R.string.next))
+                        }
+
+                        Text(
+                            text = stringResource(R.string.or_only),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        TextButton(
+                            onClick = { googleLauncher.launch(googleSignInClient.signInIntent) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = stringResource(R.string.continue_with_google), fontSize = 14.sp)
+                        }
                     }
-                }
-            )
-        }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.role_title),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = stringResource(R.string.role_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
 
-        Text(
-            text = stringResource(R.string.enter_details_title),
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
-        )
-        Text(
-            text = stringResource(R.string.enter_details_desc),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+                        RoleOptionCard(
+                            title = stringResource(R.string.role_hire_title),
+                            description = stringResource(R.string.role_hire_desc),
+                            icon = Icons.Default.Search,
+                            isSelected = selectedRole == UserRole.HIRER,
+                            accentColor = Color(0xFFFEF5DD),
+                            onClick = { selectedRole = UserRole.HIRER }
+                        )
 
-        OutlinedTextField(
-            value = fullName,
-            onValueChange = { fullName = it },
-            label = { Text(stringResource(R.string.full_name)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
+                        RoleOptionCard(
+                            title = stringResource(R.string.role_work_title),
+                            description = stringResource(R.string.role_work_desc),
+                            icon = Icons.Default.Handyman,
+                            isSelected = selectedRole == UserRole.WORKER,
+                            accentColor = Color(0xFFE8F5E9),
+                            onClick = { selectedRole = UserRole.WORKER }
+                        )
 
-        OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { phoneNumber = it },
-            label = { Text(stringResource(R.string.phone_number)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            shape = RoundedCornerShape(12.dp)
-        )
-
-        val phoneDigits = phoneNumber.filter { it.isDigit() }
-        val hasIdentity = fullName.isNotBlank() && phoneDigits.length >= 10
-        Button(
-            onClick = { detailsSubmitted = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(14.dp),
-            enabled = hasIdentity
-        ) {
-            Text(text = stringResource(R.string.next))
-        }
-
-        Text(
-            text = stringResource(R.string.or_only),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        TextButton(
-            onClick = { googleLauncher.launch(googleSignInClient.signInIntent) },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Text(text = stringResource(R.string.continue_with_google), fontSize = 14.sp)
-        }
-
-        if (detailsSubmitted) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    text = stringResource(R.string.role_title),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                )
-                Text(
-                    text = stringResource(R.string.role_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                RoleOptionCard(
-                    title = stringResource(R.string.role_hire_title),
-                    description = stringResource(R.string.role_hire_desc),
-                    icon = Icons.Default.HomeRepairService,
-                    isSelected = selectedRole == UserRole.HIRER,
-                    accentColor = Color(0xFFFFF3E0),
-                    onClick = { selectedRole = UserRole.HIRER }
-                )
-
-                RoleOptionCard(
-                    title = stringResource(R.string.role_work_title),
-                    description = stringResource(R.string.role_work_desc),
-                    icon = Icons.Default.Handyman,
-                    isSelected = selectedRole == UserRole.WORKER,
-                    accentColor = Color(0xFFE8F5E9),
-                    onClick = { selectedRole = UserRole.WORKER }
-                )
-
-                val canContinue = selectedRole != null && hasIdentity
-                Button(
-                    onClick = { selectedRole?.let { onContinue(it, fullName.trim(), phoneDigits) } },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    enabled = canContinue
-                ) {
-                    Text(text = stringResource(R.string.role_continue))
+                        val phoneDigits = phoneNumber.filter { it.isDigit() }
+                        val hasIdentity = fullName.isNotBlank() && phoneDigits.length >= 10
+                        val canContinue = selectedRole != null && hasIdentity
+                        Button(
+                            onClick = { selectedRole?.let { onContinue(it, fullName.trim(), phoneDigits) } },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            enabled = canContinue
+                        ) {
+                            Text(text = stringResource(R.string.role_continue))
+                        }
+                    }
                 }
             }
         }
@@ -299,13 +317,17 @@ private fun RoleOptionCard(
     onClick: () -> Unit
 ) {
     val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-    val containerColor = if (isSelected) accentColor else MaterialTheme.colorScheme.surface
 
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+            .glassmorphism(
+                cornerRadius = 20.dp,
+                fillAlpha = if (isSelected) 0.3f else 0.1f,
+                borderAlpha = if (isSelected) 0.5f else 0.2f
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(20.dp),
         border = if (isSelected) BorderStroke(2.dp, borderColor) else null
     ) {
@@ -315,30 +337,30 @@ private fun RoleOptionCard(
                 .padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(accentColor, RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(accentColor, RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
-    }
 }

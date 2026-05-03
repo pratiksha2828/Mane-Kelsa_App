@@ -46,7 +46,7 @@ fun AvailabilityToggleCard(
                         fontSize = 24.sp
                     )
                     Text(
-                        text = stringResource(R.string.available_today),
+                        text = if (isAvailable) stringResource(R.string.status_available) else stringResource(R.string.status_busy),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

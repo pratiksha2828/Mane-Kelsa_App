@@ -32,6 +32,7 @@ fun WorkerListScreen(
     val filters = listOf("All", "Cleaners", "Gardeners", "Drivers", "Others")
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             Surface(shadowElevation = 4.dp) {
                 Column(
