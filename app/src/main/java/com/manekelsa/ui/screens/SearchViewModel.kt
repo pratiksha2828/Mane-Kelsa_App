@@ -27,6 +27,9 @@ class SearchViewModel @Inject constructor(
     private val callLogRepository: CallLogRepository
 ) : ViewModel() {
 
+    private val localEmployerId = "local_employer"
+    private val localEmployerName = "Local Employer"
+
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("All")
     private val _error = MutableStateFlow<String?>(null)
@@ -37,9 +40,6 @@ class SearchViewModel @Inject constructor(
         .map { workers ->
             workers.map { worker ->
                 val normalizedName = WorkerNameNormalizer.normalize(worker.name, worker.id, worker.phoneNumber)
-                if (normalizedName != worker.name) {
-                    viewModelScope.launch { workerRepository.updateLocalWorkerName(worker.id, normalizedName) }
-                }
                 worker.copy(name = normalizedName)
             }
         }
@@ -50,41 +50,35 @@ class SearchViewModel @Inject constructor(
         .map { logs -> logs.map { it.workerId }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
-    private val _hireRequests = workerRepository.getEmployerRequests("local_employer")
+    private val _hireRequests = workerRepository.getEmployerRequests(localEmployerId)
         .map { requests -> requests.associate { it.workerId to it.status } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
-    @OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<SearchUiState> = combine(
+    // IMMEDIATE UI STATE for the search bar
+    private val _baseUiState = combine(
         _searchQuery,
         _selectedCategory,
-        _allWorkers,
         _contactedWorkerIds,
         _hireRequests,
         _error
-    ) { params ->
-        val query = params[0] as String
-        val category = params[1] as String
-        val workers = params[2] as List<WorkerEntity>
-        val contactedIds = params[3] as Set<String>
-        val requests = params[4] as Map<String, String>
-        val error = params[5] as String?
-
+    ) { query, category, contactedIds, requests, error ->
         SearchUiState(
             searchQuery = query,
             selectedCategory = category,
-            workers = workers,
             contactedWorkerIds = contactedIds,
             hireRequests = requests,
             isLoading = false,
             error = error
         )
-    }.flatMapLatest { state ->
-        val queryFlow = if (state.searchQuery.isEmpty()) flowOf(state.searchQuery) else flowOf(state.searchQuery).debounce(300)
-        queryFlow.map { debouncedQuery ->
-            val data = if (state.workers.isEmpty() && state.error == null) fallbackWorkers else state.workers
+    }
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<SearchUiState> = _baseUiState.flatMapLatest { state ->
+        // Debounce only the search query for filtering, but emit the immediate query in the state
+        _allWorkers.map { allWorkers ->
+            val data = if (allWorkers.isEmpty() && state.error == null) fallbackWorkers else allWorkers
             state.copy(
-                workers = filterWorkers(data, debouncedQuery, state.selectedCategory),
+                workers = filterWorkers(data, state.searchQuery, state.selectedCategory),
                 isLoading = data.isEmpty() && state.error == null
             )
         }
@@ -118,13 +112,8 @@ class SearchViewModel @Inject constructor(
 
             matchesQuery && matchesSkill
         }.sortedWith(
-            compareByDescending<WorkerEntity> { worker ->
-                if (searchText.isBlank()) 0
-                else if (worker.area.equals(searchText, ignoreCase = true)) 2
-                else if (worker.area.contains(searchText, ignoreCase = true)) 1
-                else 0
-            }.thenByDescending { it.isAvailable }
-             .thenByDescending { it.averageRating }
+            compareByDescending<WorkerEntity> { it.isAvailable }
+                .thenByDescending { it.averageRating }
         )
     }
 
@@ -142,19 +131,15 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun onRequestHire(workerId: String) {
-        viewModelScope.launch {
-            workerRepository.createHireRequest(
-                workerId = workerId,
-                employerId = "local_employer",
-                employerName = "Employer User"
-            )
-        }
-    }
-
     fun onRateWorker(workerId: String) {
         viewModelScope.launch {
             workerRepository.rateWorker(workerId)
+        }
+    }
+
+    fun onRequestHire(workerId: String) {
+        viewModelScope.launch {
+            workerRepository.createHireRequest(workerId, localEmployerId, localEmployerName)
         }
     }
 

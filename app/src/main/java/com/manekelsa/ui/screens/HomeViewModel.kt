@@ -29,6 +29,9 @@ data class EmployerRequestUiModel(
 data class HomeUiState(
     val userName: String? = null,
     val isProfileComplete: Boolean = false,
+    val totalJobs: Int = 0,
+    val averageRating: Float = 0f,
+    val timesContacted: Int = 0,
     val availableWorkersCount: Int = 0,
     val featuredWorkers: List<WorkerEntity> = emptyList(),
     val recentCalls: List<CallLogEntity> = emptyList(),
@@ -64,7 +67,9 @@ class HomeViewModel @Inject constructor(
                 val profile = workerRepository.getWorkerProfile(uid)
                 _uiState.value = _uiState.value.copy(
                     userName = profile?.name ?: currentUser.displayName ?: currentUser.phoneNumber,
-                    isProfileComplete = profile != null
+                    isProfileComplete = profile != null,
+                    totalJobs = profile?.totalRatings ?: 0,
+                    averageRating = profile?.averageRating ?: 0f
                 )
             }
 
@@ -95,6 +100,12 @@ class HomeViewModel @Inject constructor(
             }
 
             launch {
+                callLogRepository.getTotalCallCount().collectLatest { count ->
+                    _uiState.value = _uiState.value.copy(timesContacted = count)
+                }
+            }
+
+            launch {
                 callLogRepository.getRecentCallLogs().collectLatest { logs ->
                     _uiState.value = _uiState.value.copy(recentCalls = logs)
                 }
@@ -116,16 +127,6 @@ class HomeViewModel @Inject constructor(
                         pendingRequests = requests.filter { it.status == "PENDING" && it.workerId == uid },
                         employerRequests = empRequests
                     )
-
-                    if (uid != null && _uiState.value.isProfileComplete) {
-                        val hasRequests = requests.any { it.workerId == uid }
-                        if (!hasRequests && !mockRequestGenerated) {
-                            mockRequestGenerated = true
-                            viewModelScope.launch {
-                                workerRepository.createHireRequest(uid, "mock_employer", "Arun Kumar")
-                            }
-                        }
-                    }
                 }
             }
         }

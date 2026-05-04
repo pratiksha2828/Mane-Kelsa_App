@@ -50,8 +50,14 @@ import com.manekelsa.utils.TranslationUtils
 
 @Composable
 fun SearchScreen(
+    initialCategory: String? = null,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
+    androidx.compose.runtime.LaunchedEffect(initialCategory) {
+        if (initialCategory != null) {
+            viewModel.onCategorySelect(initialCategory)
+        }
+    }
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(

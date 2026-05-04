@@ -41,7 +41,7 @@ import com.manekelsa.utils.TranslationUtils
 fun HomeScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToCallHistory: () -> Unit = {},
-    onNavigateToSearch: () -> Unit = {},
+    onNavigateToSearch: (String?) -> Unit = {},
     userRole: UserRole = UserRole.HIRER,
     onChangeRole: () -> Unit = {},
     displayName: String = "",
@@ -73,13 +73,15 @@ fun HomeScreen(
 
         if (userRole == UserRole.HIRER) {
             HeroHireCard(
-                onSearchClick = onNavigateToSearch,
-                onExploreClick = onNavigateToSearch
+                onSearchClick = { onNavigateToSearch(null) },
+                onExploreClick = { onNavigateToSearch(null) },
+                onCategoryClick = { categoryId -> onNavigateToSearch(categoryId) }
             )
         } else {
-            HeroHireCard(
-                onSearchClick = onNavigateToSearch,
-                onExploreClick = onNavigateToSearch
+            WorkerStatsOverview(
+                totalJobs = uiState.totalJobs,
+                averageRating = uiState.averageRating,
+                timesContacted = uiState.timesContacted
             )
         }
 
@@ -262,18 +264,42 @@ private fun LanguageChip(label: String, selected: Boolean, onClick: () -> Unit) 
     }
 }
 
-private data class HomeCategory(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+@Composable
+private fun WorkerStatsOverview(totalJobs: Int, averageRating: Float, timesContacted: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(stringResource(R.string.stats), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard(stringResource(R.string.stat_jobs), totalJobs.toString(), Icons.Default.DoneAll, Modifier.weight(1f))
+            StatCard(stringResource(R.string.stat_rating), "%.1f".format(averageRating), Icons.Default.Star, Modifier.weight(1f))
+            StatCard(stringResource(R.string.stat_calls), timesContacted.toString(), Icons.Default.Phone, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun StatCard(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier) {
+    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+            Text(label, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+private data class HomeCategory(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val skillId: String)
 
 @Composable
 private fun HeroHireCard(
     onSearchClick: () -> Unit,
-    onExploreClick: () -> Unit
+    onExploreClick: () -> Unit,
+    onCategoryClick: (String) -> Unit
 ) {
     val categories = listOf(
-        HomeCategory(stringResource(R.string.home_category_plumbing), Icons.Default.Build),
-        HomeCategory(stringResource(R.string.home_category_electrical), Icons.Default.FlashOn),
-        HomeCategory(stringResource(R.string.home_category_cleaning), Icons.Default.Home),
-        HomeCategory(stringResource(R.string.home_category_ac_service), Icons.Default.Settings)
+        HomeCategory(stringResource(R.string.home_category_plumbing), Icons.Default.Build, com.manekelsa.ui.model.SkillOption.PLUMBER),
+        HomeCategory(stringResource(R.string.home_category_electrical), Icons.Default.FlashOn, com.manekelsa.ui.model.SkillOption.ELECTRICIAN),
+        HomeCategory(stringResource(R.string.home_category_cleaning), Icons.Default.Home, com.manekelsa.ui.model.SkillOption.CLEANER),
+        HomeCategory(stringResource(R.string.home_category_ac_service), Icons.Default.Settings, com.manekelsa.ui.model.SkillOption.PAINTER)
     )
 
     Card(
@@ -313,7 +339,7 @@ private fun HeroHireCard(
                 contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
                 items(categories) { category ->
-                    CategoryPill(category = category)
+                    CategoryPill(category = category, onClick = { onCategoryClick(category.skillId) })
                 }
             }
             HomeSearchBar(
@@ -340,11 +366,12 @@ private fun HeroHireCard(
 }
 
 @Composable
-private fun CategoryPill(category: HomeCategory) {
+private fun CategoryPill(category: HomeCategory, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(78.dp)
             .glassmorphism(cornerRadius = 18.dp, fillAlpha = 0.3f, borderAlpha = 0.55f)
+            .clickable { onClick() }
             .padding(vertical = 10.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)

@@ -129,9 +129,18 @@ fun MainScreen() {
                                     launchSingleTop = true 
                                 }
                             },
-                            onNavigateToSearch = {
-                                navController.navigate(Screen.Search.route) {
+                            onNavigateToSearch = { category ->
+                                val route = if (category != null) {
+                                    "${Screen.Search.route}?category=$category"
+                                } else {
+                                    Screen.Search.route
+                                }
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
                                     launchSingleTop = true
+                                    restoreState = true
                                 }
                             },
                             userRole = userRole ?: UserRole.HIRER,
@@ -146,24 +155,48 @@ fun MainScreen() {
                             phoneNumber = phoneNumber
                         )
                     }
-                    composable(Screen.Search.route) { SearchScreen() }
+                    composable(
+                        route = "${Screen.Search.route}?category={category}",
+                        arguments = listOf(androidx.navigation.navArgument("category") {
+                            type = androidx.navigation.NavType.StringType
+                            nullable = true
+                        })
+                    ) { backStackEntry ->
+                        val category = backStackEntry.arguments?.getString("category")
+                        SearchScreen(initialCategory = category)
+                    }
                     composable(Screen.Requests.route) { com.manekelsa.ui.screens.RequestsScreen() }
                     composable(Screen.Profile.route) { 
                         ProfileScreen(
                             displayName = displayName,
-                            phoneNumber = phoneNumber
+                            phoneNumber = phoneNumber,
+                            onDeleteAccount = {
+                                userRole = null
+                                displayName = ""
+                                phoneNumber = ""
+                            }
                         ) 
                     }
                     composable(Screen.ResidentProfile.route) {
                         ResidentProfileScreen(
                             displayName = displayName,
-                            phoneNumber = phoneNumber
+                            phoneNumber = phoneNumber,
+                            onDeleteAccount = {
+                                userRole = null
+                                displayName = ""
+                                phoneNumber = ""
+                            }
                         )
                     }
                     composable(Screen.Availability.route) {
                         ProfileScreen(
                             displayName = displayName,
-                            phoneNumber = phoneNumber
+                            phoneNumber = phoneNumber,
+                            onDeleteAccount = {
+                                userRole = null
+                                displayName = ""
+                                phoneNumber = ""
+                            }
                         )
                     }
                     composable(Screen.CallHistory.route) {

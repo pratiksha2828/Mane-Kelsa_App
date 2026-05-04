@@ -16,7 +16,7 @@ import com.manekelsa.data.local.dao.HireRequestDao
 
 @Database(
     entities = [WorkerEntity::class, PendingSync::class, CallLogEntity::class, HireRequestEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

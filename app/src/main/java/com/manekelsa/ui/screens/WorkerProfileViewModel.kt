@@ -100,7 +100,7 @@ class WorkerProfileViewModel @Inject constructor(
             totalJobs = worker.totalRatings,
             averageRating = worker.averageRating,
             likes = worker.likes,
-            isEditMode = true
+            isEditMode = false
         ) }
     }
 
@@ -183,7 +183,7 @@ class WorkerProfileViewModel @Inject constructor(
                 repository.saveWorkerProfile(workerEntity)
                 _uiState.update { it.copy(
                     message = "Profile Updated Successfully", 
-                    isEditMode = true,
+                    isEditMode = false,
                     profilePhotoUrl = downloadUrl,
                     localPhotoUri = null
                 ) }
@@ -203,8 +203,47 @@ class WorkerProfileViewModel @Inject constructor(
         _uiState.update { it.copy(currentLanguage = code) }
     }
 
-    fun logout() {
-        auth.signOut()
+    fun toggleEditMode() {
+        _uiState.update { it.copy(isEditMode = !it.isEditMode) }
+    }
+
+    fun deleteAccount(context: Context, onSuccess: () -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            onSuccess()
+            return
+        }
+        val uid = user.uid
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val db = com.google.firebase.database.FirebaseDatabase.getInstance()
+                try {
+                    db.reference.child("workers").child(uid).removeValue().await()
+                    db.reference.child("residents").child(uid).removeValue().await()
+                } catch (e: Exception) {
+                    // Ignore DB errors to ensure auth account is still deleted
+                }
+                
+                try {
+                    repository.clearLocalWorkers()
+                } catch (e: Exception) {}
+
+                user.delete().await()
+                _uiState.update { it.copy(message = "Account deleted successfully", isEditMode = false) }
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Delete Failed: ${e.message}, logging out instead") }
+                auth.signOut()
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
     }
 
     fun clearMessage() {
