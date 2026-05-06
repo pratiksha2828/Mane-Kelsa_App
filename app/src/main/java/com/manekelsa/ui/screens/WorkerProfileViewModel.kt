@@ -7,8 +7,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.storage.FirebaseStorage
 import com.manekelsa.data.local.entity.WorkerEntity
+import com.manekelsa.data.account.AccountDeletionManager
 import com.manekelsa.domain.repository.CallLogRepository
 import com.manekelsa.domain.repository.WorkerRepository
 import com.manekelsa.utils.LocalizationManager
@@ -50,7 +52,8 @@ class WorkerProfileViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val storage: FirebaseStorage,
     private val repository: WorkerRepository,
-    private val callLogRepository: CallLogRepository
+    private val callLogRepository: CallLogRepository,
+    private val accountDeletionManager: AccountDeletionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WorkerProfileUiState())
@@ -208,38 +211,24 @@ class WorkerProfileViewModel @Inject constructor(
     }
 
     fun deleteAccount(context: Context, onSuccess: () -> Unit) {
-        val user = auth.currentUser
-        if (user == null) {
-            onSuccess()
-            return
-        }
-        val uid = user.uid
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val db = com.google.firebase.database.FirebaseDatabase.getInstance()
-                try {
-                    db.reference.child("workers").child(uid).removeValue().await()
-                    db.reference.child("residents").child(uid).removeValue().await()
-                } catch (e: Exception) {
-                    // Ignore DB errors to ensure auth account is still deleted
+                val result = accountDeletionManager.deleteAccount(context)
+                if (result.isFailure) {
+                    throw result.exceptionOrNull() ?: Exception("Delete failed")
                 }
-                
-                try {
-                    repository.clearLocalWorkers()
-                } catch (e: Exception) {}
-
-                user.delete().await()
                 _uiState.update { it.copy(message = "Account deleted successfully", isEditMode = false) }
                 withContext(Dispatchers.Main) {
                     onSuccess()
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(message = "Delete Failed: ${e.message}, logging out instead") }
-                auth.signOut()
-                withContext(Dispatchers.Main) {
-                    onSuccess()
+                val errorMessage = if (e is FirebaseAuthRecentLoginRequiredException) {
+                    "Please sign in again to delete your account"
+                } else {
+                    "Delete Failed: ${e.message}"
                 }
+                _uiState.update { it.copy(message = errorMessage) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }

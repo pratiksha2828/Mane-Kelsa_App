@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.manekelsa.data.local.entity.WorkerEntity
 import com.manekelsa.domain.repository.CallLogRepository
 import com.manekelsa.domain.repository.WorkerRepository
+import com.manekelsa.utils.SearchMatcher
 import com.manekelsa.utils.WorkerNameNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -95,23 +96,38 @@ class SearchViewModel @Inject constructor(
         searchText: String,
         selectedSkill: String
     ): List<WorkerEntity> {
-        return workers.filter { worker ->
-            val matchesQuery = if (searchText.isBlank()) {
-                true
-            } else {
-                worker.name.contains(searchText, ignoreCase = true) ||
-                worker.area.contains(searchText, ignoreCase = true) ||
-                worker.skillsList.any { it.contains(searchText, ignoreCase = true) }
-            }
+        val normalizedQuery = SearchMatcher.normalizeQuery(searchText)
+        val skillFiltered = workers.filter { worker ->
+            SearchMatcher.matchesSkill(worker, selectedSkill)
+        }
 
-            val matchesSkill = if (selectedSkill == "All") {
-                true
-            } else {
-                worker.skillsList.any { it.equals(selectedSkill, ignoreCase = true) }
-            }
+        if (normalizedQuery.isBlank()) {
+            return sortWorkers(skillFiltered)
+        }
 
-            matchesQuery && matchesSkill
-        }.sortedWith(
+        val exactMatches = skillFiltered.filter { worker ->
+            SearchMatcher.matchesQuery(worker, normalizedQuery)
+        }
+
+        val results = if (exactMatches.isNotEmpty()) {
+            sortWorkers(exactMatches)
+        } else {
+            skillFiltered
+                .map { worker -> worker to SearchMatcher.similarityScore(worker, normalizedQuery) }
+                .sortedWith(
+                    compareBy<Pair<WorkerEntity, Int>> { it.second }
+                        .thenByDescending { it.first.isAvailable }
+                        .thenByDescending { it.first.averageRating }
+                )
+                .take(5)
+                .map { it.first }
+        }
+
+        return results
+    }
+
+    private fun sortWorkers(workers: List<WorkerEntity>): List<WorkerEntity> {
+        return workers.sortedWith(
             compareByDescending<WorkerEntity> { it.isAvailable }
                 .thenByDescending { it.averageRating }
         )

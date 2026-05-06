@@ -1,24 +1,44 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "manekelsa-dummy"
+    "project_number": "600856036967",
+    "project_id": "manekelsaapp-cf37c",
+    "storage_bucket": "manekelsaapp-cf37c.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:000000000000",
+        "mobilesdk_app_id": "1:600856036967:android:b415d6248b8ea86ab7b6c2",
         "android_client_info": {
           "package_name": "com.manekelsa"
         }
       },
+      "oauth_client": [
+        {
+          "client_id": "600856036967-777e9kvd2llbqd5fglrs55legjj5nhhr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.manekelsa",
+            "certificate_hash": "78bfbde4fa7edffbe4d8f435809dfc6ac5cf8e26"
+          }
+        },
+        {
+          "client_id": "600856036967-c7r1qcru7dk6qk641ou91e6gfn5k86pr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "dummy_key"
+          "current_key": "AIzaSyBeU5eYTmdt5KNi_yx5hyrjrO7ojAJRztQ"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "600856036967-c7r1qcru7dk6qk641ou91e6gfn5k86pr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

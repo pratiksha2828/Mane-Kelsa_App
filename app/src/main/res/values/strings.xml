@@ -63,6 +63,8 @@
     <string name="or_only">or</string>
     <string name="continue_with_google">Continue with Google</string>
     <string name="google_sign_in_failed">Google sign-in failed. Try again.</string>
+    <string name="google_sign_in_not_configured">Google sign-in is not configured. Check your Firebase setup.</string>
+    <string name="enter_first_last_name_error">Please enter your first and last name</string>
 
     <!-- Search Screen -->
     <string name="search_placeholder">Search by name, area, or skill...</string>
@@ -136,6 +138,7 @@
     <string name="add_skill_label">Add a new skill</string>
     <string name="add_skill_button">Add skill</string>
     <string name="rate_per_day">Rate per day</string>
+    <string name="rate_per_hour">Rate per hour</string>
     <string name="resident_profile">Resident Profile</string>
     <string name="preferred_area">Preferred area</string>
     <string name="address_label">Address</string>
@@ -152,7 +155,6 @@
     <string name="no_photo">No photo</string>
     <string name="edit">Edit</string>
     <string name="save_and_continue">Save &amp; Continue</string>
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
     <string name="tap_to_proceed">Tap here to proceed -></string>
 
     <!-- Reviews and Request Actions -->

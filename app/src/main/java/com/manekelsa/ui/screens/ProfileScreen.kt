@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import android.widget.Toast
 import com.manekelsa.R
 import com.manekelsa.ui.components.WrapRow
 import com.manekelsa.ui.model.SkillOption
@@ -50,6 +51,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
+    val accountDeletionViewModel: AccountDeletionViewModel = hiltViewModel()
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -126,7 +128,7 @@ fun ProfileScreen(
             // SECTION 3: (Removed Availability)
 
             // SECTION 4: SETTINGS
-            SettingsSection(uiState, viewModel, onDeleteAccount)
+            SettingsSection(uiState, viewModel, accountDeletionViewModel, onDeleteAccount)
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -331,7 +333,12 @@ fun AvailabilitySection(uiState: WorkerProfileUiState, onToggle: (Boolean) -> Un
 }
 
 @Composable
-fun SettingsSection(uiState: WorkerProfileUiState, viewModel: WorkerProfileViewModel, onDeleteAccount: () -> Unit) {
+fun SettingsSection(
+    uiState: WorkerProfileUiState,
+    viewModel: WorkerProfileViewModel,
+    accountDeletionViewModel: AccountDeletionViewModel,
+    onDeleteAccount: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
         
@@ -342,15 +349,37 @@ fun SettingsSection(uiState: WorkerProfileUiState, viewModel: WorkerProfileViewM
         }
 
         val context = LocalContext.current
+        var isDeleting by remember { mutableStateOf(false) }
         Button(
-            onClick = { viewModel.deleteAccount(context) { onDeleteAccount() } },
+            onClick = {
+                if (isDeleting) return@Button
+                isDeleting = true
+                accountDeletionViewModel.deleteAccount(
+                    context = context,
+                    onSuccess = {
+                        isDeleting = false
+                        onDeleteAccount()
+                    },
+                    onError = { message ->
+                        isDeleting = false
+                        Toast.makeText(context, "Delete Failed: $message", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
+            enabled = !isDeleting,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Icon(Icons.Default.DeleteForever, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Delete Account")
+            if (isDeleting) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Deleting...")
+            } else {
+                Icon(Icons.Default.DeleteForever, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete Account")
+            }
         }
     }
 }

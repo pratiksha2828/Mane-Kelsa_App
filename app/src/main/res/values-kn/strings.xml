@@ -63,6 +63,8 @@
     <string name="or_only">ಅಥವಾ</string>
     <string name="continue_with_google">Google ಮೂಲಕ ಮುಂದುವರಿಸಿ</string>
     <string name="google_sign_in_failed">Google ಸೈನ್-ಇನ್ ವಿಫಲವಾಗಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="google_sign_in_not_configured">Google ಸೈನ್-ಇನ್ ಸೆಟ್‌ಅಪ್ ಆಗಿಲ್ಲ. Firebase ಸೆಟ್‌ಅಪ್ ಪರಿಶೀಲಿಸಿ.</string>
+    <string name="enter_first_last_name_error">ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊದಲ ಮತ್ತು ಕೊನೆಯ ಹೆಸರನ್ನು ನಮೂದಿಸಿ</string>
 
     <!-- Search Screen -->
     <string name="search_placeholder">ಹೆಸರು, ಪ್ರದೇಶ ಅಥವಾ ಕೌಶಲ್ಯ ಮೂಲಕ ಹುಡುಕಿ...</string>

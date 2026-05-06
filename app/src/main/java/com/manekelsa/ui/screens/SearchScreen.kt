@@ -46,6 +46,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.style.TextOverflow
 import com.manekelsa.R
 import com.manekelsa.data.local.entity.WorkerEntity
+import com.manekelsa.utils.LocalizationManager
 import com.manekelsa.utils.TranslationUtils
 
 @Composable
@@ -98,8 +99,15 @@ fun SearchScreen(
                             } else {
                                 IconButton(onClick = {
                                     try {
+                                        val languageTag = if (LocalizationManager.getLanguage().startsWith("kn")) {
+                                            "kn-IN"
+                                        } else {
+                                            "en-IN"
+                                        }
                                         val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                             putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, languageTag)
+                                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag)
                                         }
                                         speechRecognizerLauncher.launch(intent)
                                     } catch (e: Exception) {

@@ -6,6 +6,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.manekelsa.data.local.entity.WorkerEntity
 import com.manekelsa.domain.repository.RatingRepository
 import com.manekelsa.domain.repository.WorkerRepository
+import com.manekelsa.utils.SearchMatcher
+import com.manekelsa.utils.TranslationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -94,14 +96,15 @@ class WorkerListViewModel @Inject constructor(
         val area = args[3] as String
         val availableOnly = args[4] as Boolean
         val defaultArea = args[5] as String
+        val normalizedQuery = SearchMatcher.normalizeQuery(query)
+        val normalizedArea = SearchMatcher.normalizeText(TranslationUtils.normalizeAreaForSearch(area))
+        val normalizedDefaultArea = SearchMatcher.normalizeText(TranslationUtils.normalizeAreaForSearch(defaultArea))
 
         allWorkers
             .asSequence()
             .filter { worker ->
-                val matchesQuery = query.isEmpty() || 
-                        worker.name.contains(query, ignoreCase = true) ||
-                        worker.area.contains(query, ignoreCase = true) ||
-                        worker.skillsList.any { it.contains(query, ignoreCase = true) }
+                val matchesQuery = normalizedQuery.isBlank() ||
+                    SearchMatcher.matchesQuery(worker, normalizedQuery)
                 
                 val matchesFilter = when (filter) {
                     "All" -> true
@@ -115,16 +118,20 @@ class WorkerListViewModel @Inject constructor(
                     else -> true
                 }
 
-                val matchesArea = area.isEmpty() || 
-                        worker.area.trim().equals(area.trim(), ignoreCase = true)
+                val matchesArea = area.isEmpty() ||
+                    SearchMatcher.normalizeText(
+                        TranslationUtils.normalizeAreaForSearch(worker.area)
+                    ) == normalizedArea
                 
                 val matchesAvailability = !availableOnly || worker.isAvailable
 
                 matchesQuery && matchesFilter && matchesArea && matchesAvailability
             }
             .sortedWith(
-                compareByDescending<WorkerEntity> { 
-                    it.area.trim().equals(defaultArea.trim(), ignoreCase = true) 
+                compareByDescending<WorkerEntity> {
+                    SearchMatcher.normalizeText(
+                        TranslationUtils.normalizeAreaForSearch(it.area)
+                    ) == normalizedDefaultArea
                 }.thenByDescending { it.isAvailable }
                  .thenByDescending { it.averageRating }
             )

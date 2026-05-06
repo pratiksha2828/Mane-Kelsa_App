@@ -50,6 +50,7 @@ fun ResidentProfileScreen(
     val auth = FirebaseAuth.getInstance()
     val database = FirebaseDatabase.getInstance()
     val viewModel: HomeViewModel = hiltViewModel()
+    val accountDeletionViewModel: AccountDeletionViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
     val uid = auth.currentUser?.uid ?: "default"
@@ -207,33 +208,16 @@ fun ResidentProfileScreen(
 
             Button(
                 onClick = { 
-                    val user = auth.currentUser
-                    if (user == null) {
-                        context.getSharedPreferences("ResidentProfile_default", android.content.Context.MODE_PRIVATE).edit().clear().apply()
-                        onDeleteAccount()
-                        return@Button
-                    }
-                    val userUid = user.uid
-                    scope.launch {
-                        try {
-                            try {
-                                database.reference.child("residents").child(userUid).removeValue().await()
-                            } catch (e: Exception) {
-                                // Ignore Firebase DB errors to allow auth account to be deleted
-                            }
-                            
-                            context.getSharedPreferences("ResidentProfile_$userUid", android.content.Context.MODE_PRIVATE).edit().clear().apply()
-                            
-                            user.delete().await()
+                    accountDeletionViewModel.deleteAccount(
+                        context = context,
+                        onSuccess = {
                             Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
                             onDeleteAccount()
-                        } catch (e: Exception) {
-                            // If delete fails, force logout so user isn't stuck
-                            Toast.makeText(context, "Delete Failed: ${e.message}, logging out instead", Toast.LENGTH_SHORT).show()
-                            auth.signOut()
-                            onDeleteAccount()
+                        },
+                        onError = { message ->
+                            Toast.makeText(context, "Delete Failed: $message", Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    )
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error),

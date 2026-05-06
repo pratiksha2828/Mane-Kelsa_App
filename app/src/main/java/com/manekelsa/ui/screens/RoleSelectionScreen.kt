@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.app.Activity
+import android.content.Context
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -51,6 +52,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import com.manekelsa.R
+import com.manekelsa.ui.components.MeshGradientBackground
 import com.manekelsa.ui.components.glassmorphism
 import com.manekelsa.ui.model.UserRole
 import com.manekelsa.utils.LocalizationManager
@@ -64,31 +66,83 @@ fun RoleSelectionScreen(
     var phoneNumber by rememberSaveable { mutableStateOf("") }
     var languageCode by rememberSaveable { mutableStateOf(LocalizationManager.getLanguage()) }
     var detailsSubmitted by rememberSaveable { mutableStateOf(false) }
+    var isGoogleSignedIn by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = context as? Activity
     val auth = remember { FirebaseAuth.getInstance() }
+    val webClientId = remember { getWebClientId(context) }
 
-    val googleSignInClient = remember {
-        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
+    androidx.compose.runtime.LaunchedEffect(auth.currentUser?.uid) {
+        val user = auth.currentUser
+        if (user != null) {
+            val isGoogle = user.providerData.any { it.providerId == "google.com" }
+            if (isGoogle) {
+                isGoogleSignedIn = true
+                if (fullName.isBlank()) {
+                    fullName = user.displayName.orEmpty()
+                }
+                val authPhone = user.phoneNumber.orEmpty()
+                if (phoneNumber.isBlank() && authPhone.isNotBlank()) {
+                    phoneNumber = authPhone.filter { it.isDigit() }.takeLast(10)
+                }
+                if (fullName.isNotBlank()) {
+                    detailsSubmitted = true
+                }
+            }
+        }
+    }
+
+    val googleSignInClient = remember(webClientId) {
+        val builder = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
-            .build()
-        GoogleSignIn.getClient(context, options)
+        if (!webClientId.isNullOrBlank()) {
+            builder.requestIdToken(webClientId)
+        }
+        GoogleSignIn.getClient(context, builder.build())
     }
 
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        val data = result.data
+        if (data == null) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.google_sign_in_failed),
+                Toast.LENGTH_SHORT
+            ).show()
+            return@rememberLauncherForActivityResult
+        }
+        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
         try {
             val account = task.getResult(ApiException::class.java)
+            if (account == null || account.idToken.isNullOrBlank()) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.google_sign_in_not_configured),
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@rememberLauncherForActivityResult
+            }
             val credential = GoogleAuthProvider.getCredential(account.idToken, null)
             auth.signInWithCredential(credential).addOnCompleteListener { signInTask ->
                 if (signInTask.isSuccessful) {
                     fullName = account.displayName.orEmpty()
-                    phoneNumber = phoneNumber.ifBlank { "" }
-                    detailsSubmitted = true
+                    val authPhone = auth.currentUser?.phoneNumber.orEmpty()
+                    if (phoneNumber.isBlank() && authPhone.isNotBlank()) {
+                        phoneNumber = authPhone.filter { it.isDigit() }.takeLast(10)
+                    }
+                    isGoogleSignedIn = true
+                    if (fullName.isNotBlank()) {
+                        detailsSubmitted = true
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Please enter your name",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 } else {
                     Toast.makeText(
                         context,
@@ -106,20 +160,21 @@ fun RoleSelectionScreen(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 500.dp)
-                .fillMaxWidth()
-                .systemBarsPadding()
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+    MeshGradientBackground {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 500.dp)
+                    .fillMaxWidth()
+                    .systemBarsPadding()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -177,21 +232,37 @@ fun RoleSelectionScreen(
                             label = { Text(stringResource(R.string.full_name)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
+                            isError = fullName.isNotBlank() && !isGoogleSignedIn && !isFullNameValid(fullName),
+                            supportingText = {
+                                if (fullName.isNotBlank() && !isGoogleSignedIn && !isFullNameValid(fullName)) {
+                                    Text(text = stringResource(R.string.enter_first_last_name_error))
+                                }
+                            },
                             shape = RoundedCornerShape(12.dp)
                         )
 
                         OutlinedTextField(
                             value = phoneNumber,
-                            onValueChange = { phoneNumber = it },
+                            onValueChange = { input ->
+                                val digits = input.filter { it.isDigit() }
+                                val normalized = if (digits.startsWith("91") && digits.length > 10) {
+                                    digits.drop(2)
+                                } else {
+                                    digits
+                                }
+                                phoneNumber = normalized.take(10)
+                            },
                             label = { Text(stringResource(R.string.phone_number)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
+                            prefix = { Text(text = "+91 ") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             shape = RoundedCornerShape(12.dp)
                         )
 
                         val phoneDigits = phoneNumber.filter { it.isDigit() }
-                        val hasIdentity = fullName.isNotBlank() && phoneDigits.length >= 10
+                        val isNameValid = if (isGoogleSignedIn) fullName.isNotBlank() else isFullNameValid(fullName)
+                        val hasIdentity = isNameValid && (phoneDigits.length == 10 || isGoogleSignedIn)
                         Button(
                             onClick = { detailsSubmitted = true },
                             modifier = Modifier
@@ -212,7 +283,17 @@ fun RoleSelectionScreen(
                         )
 
                         TextButton(
-                            onClick = { googleLauncher.launch(googleSignInClient.signInIntent) },
+                            onClick = {
+                                if (webClientId.isNullOrBlank()) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.google_sign_in_not_configured),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    googleLauncher.launch(googleSignInClient.signInIntent)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(text = stringResource(R.string.continue_with_google), fontSize = 14.sp)
@@ -235,7 +316,7 @@ fun RoleSelectionScreen(
                             description = stringResource(R.string.role_hire_desc),
                             icon = Icons.Default.Search,
                             isSelected = selectedRole == UserRole.HIRER,
-                            accentColor = Color(0xFFFEF5DD),
+                            accentColor = Color(0xFFE8F1FF),
                             onClick = { selectedRole = UserRole.HIRER }
                         )
 
@@ -244,15 +325,43 @@ fun RoleSelectionScreen(
                             description = stringResource(R.string.role_work_desc),
                             icon = Icons.Default.Handyman,
                             isSelected = selectedRole == UserRole.WORKER,
-                            accentColor = Color(0xFFE8F5E9),
+                            accentColor = Color(0xFFE6F4F0),
                             onClick = { selectedRole = UserRole.WORKER }
                         )
 
                         val phoneDigits = phoneNumber.filter { it.isDigit() }
-                        val hasIdentity = fullName.isNotBlank() && phoneDigits.length >= 10
+                        if (!isGoogleSignedIn && phoneDigits.length < 10) {
+                            OutlinedTextField(
+                                value = phoneNumber,
+                                onValueChange = { input ->
+                                    val digits = input.filter { it.isDigit() }
+                                    val normalized = if (digits.startsWith("91") && digits.length > 10) {
+                                        digits.drop(2)
+                                    } else {
+                                        digits
+                                    }
+                                    phoneNumber = normalized.take(10)
+                                } ,
+                                label = { Text(stringResource(R.string.phone_number)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                prefix = { Text(text = "+91 ") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+                        val isNameValid = if (isGoogleSignedIn) fullName.isNotBlank() else isFullNameValid(fullName)
+                        val hasIdentity = isNameValid && (phoneDigits.length == 10 || isGoogleSignedIn)
                         val canContinue = selectedRole != null && hasIdentity
                         Button(
-                            onClick = { selectedRole?.let { onContinue(it, fullName.trim(), phoneDigits) } },
+                            onClick = {
+                                val resolvedPhone = if (phoneDigits.length == 10) {
+                                    "+91$phoneDigits"
+                                } else {
+                                    auth.currentUser?.phoneNumber.orEmpty()
+                                }
+                                selectedRole?.let { onContinue(it, fullName.trim(), resolvedPhone) }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp),
@@ -264,8 +373,20 @@ fun RoleSelectionScreen(
                     }
                 }
             }
+            }
         }
     }
+}
+
+private fun isFullNameValid(name: String): Boolean {
+    val parts = name.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    return parts.size >= 2
+}
+
+private fun getWebClientId(context: Context): String? {
+    val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+    if (resId == 0) return null
+    return context.getString(resId)
 }
 
 @Composable

@@ -16,4 +16,7 @@ interface PendingSyncDao {
 
     @Query("DELETE FROM pending_syncs WHERE workerId = :workerId AND operation = :operation")
     suspend fun deleteByWorkerAndOperation(workerId: String, operation: String)
+
+    @Query("DELETE FROM pending_syncs")
+    suspend fun clearAll()
 }
