@@ -159,7 +159,7 @@ fun SearchScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         item {
-                            MapPreviewCard(context = context)
+                            MapPreviewCard(context = context, searchQuery = uiState.searchQuery)
                         }
                         items(uiState.workers, key = { it.id }) { worker ->
                             WorkerResultCard(
@@ -202,7 +202,60 @@ fun SearchScreen(
 }
 
 @Composable
-private fun MapPreviewCard(context: Context) {
+private fun MapPreviewCard(context: Context, searchQuery: String) {
+    val mapView = remember {
+        MapView(context).apply {
+            Configuration.getInstance().userAgentValue = context.packageName
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            controller.setZoom(13.0)
+            val center = GeoPoint(12.9716, 77.5946)
+            controller.setCenter(center)
+            overlays.add(Marker(this).apply {
+                position = center
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                title = context.getString(R.string.map_default_pin)
+            })
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                    val addresses = geocoder.getFromLocationName("$searchQuery, Bangalore", 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val location = addresses[0]
+                        val geoPoint = GeoPoint(location.latitude, location.longitude)
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            mapView.controller.animateTo(geoPoint, 14.5, 1000L)
+                            mapView.overlays.clear()
+                            mapView.overlays.add(Marker(mapView).apply {
+                                position = geoPoint
+                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                title = searchQuery
+                            })
+                            mapView.invalidate()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        } else {
+            val center = GeoPoint(12.9716, 77.5946)
+            mapView.controller.animateTo(center, 13.0, 1000L)
+            mapView.overlays.clear()
+            mapView.overlays.add(Marker(mapView).apply {
+                position = center
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                title = context.getString(R.string.map_default_pin)
+            })
+            mapView.invalidate()
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,21 +268,7 @@ private fun MapPreviewCard(context: Context) {
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
-            factory = {
-                Configuration.getInstance().userAgentValue = context.packageName
-                MapView(it).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    controller.setZoom(13.0)
-                    val center = GeoPoint(12.9716, 77.5946)
-                    controller.setCenter(center)
-                    overlays.add(Marker(this).apply {
-                        position = center
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        title = context.getString(R.string.map_default_pin)
-                    })
-                }
-            }
+            factory = { mapView }
         )
     }
 }

@@ -64,4 +64,21 @@ object SkillOption {
             else -> trimmed
         }
     }
+
+    fun getAliases(skillId: String): List<String> {
+        return when (skillId) {
+            CLEANER -> listOf(CLEANER, "ಕ್ಲೀನರ್", "ಸ್ವಚ್ಛತೆ")
+            COOK -> listOf(COOK, "ಅಡುಗೆಯವರು", "ಅಡುಗೆಗಾರ")
+            GARDENER -> listOf(GARDENER, "ಗಾರ್ಡನರ್", "ತೋಟಗಾರ")
+            DRIVER -> listOf(DRIVER, "ಡ್ರೈವರ್")
+            CARETAKER -> listOf(CARETAKER, "Caretaking", "ಪಾಲಕ")
+            PLUMBER -> listOf(PLUMBER, "ಪ್ಲಂಬರ್")
+            ELECTRICIAN -> listOf(ELECTRICIAN, "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಇಲೆಕ್ಟ್ರಿಷಿಯನ್")
+            PAINTER -> listOf(PAINTER, "ಬಣ್ಣಗಾರ")
+            CARPENTER -> listOf(CARPENTER, "ಕಾರ್ಪೆಂಟರ್")
+            BABYSITTER -> listOf(BABYSITTER, "ಮಕ್ಕಳ ಪಾಲಕ")
+            NURSE -> listOf(NURSE, "ನರ್ಸ್")
+            else -> listOf(skillId)
+        }
+    }
 }
