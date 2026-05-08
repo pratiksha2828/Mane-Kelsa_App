@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ಮನೆ-ಕೆಲಸ</string>
+    <string name="nav_home">ಮುಖಪುಟ</string>
 
     <!-- General -->
     <string name="welcome">ನಮಸ್ಕಾರ 👋</string>
@@ -88,6 +89,9 @@
     <string name="call_now">ಇದೀಗ ಕರೆ ಮಾಡಿ</string>
     <string name="rate_service">ಸೇವೆಗೆ ಮೌಲ್ಯಮಾಪನ</string>
     <string name="rate_employed_only">ನೀವು ಕೆಲಸಕ್ಕೆ ನಿಯೋಜಿಸಿದ ಕಾರ್ಮಿಕರನ್ನು ಮಾತ್ರ ಮೌಲ್ಯಮಾಪನ ಮಾಡಬಹುದು.</string>
+    <string name="liked">ಇಷ್ಟಪಟ್ಟಿದೆ</string>
+    <string name="submit">ಸಲ್ಲಿಸು</string>
+    <string name="thanks_for_rating">ಮೌಲ್ಯಮಾಪನಕ್ಕೆ ಧನ್ಯವಾದಗಳು.</string>
 
     <!-- Profile Screen -->
     <string name="profile_information">ಪ್ರೊಫೈಲ್ ಮಾಹಿತಿ</string>

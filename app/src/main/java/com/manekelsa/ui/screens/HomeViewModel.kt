@@ -89,7 +89,7 @@ class HomeViewModel @Inject constructor(
                         worker.copy(name = normalizedName)
                     }
 
-                    val data = if (sanitizedWorkers.isEmpty()) fallbackWorkers else sanitizedWorkers
+                    val data = (sanitizedWorkers + fallbackWorkers).distinctBy { it.id }
                     val available = data.filter { it.isAvailable }
                     _uiState.value = _uiState.value.copy(
                         availableWorkersCount = available.size,
@@ -115,7 +115,7 @@ class HomeViewModel @Inject constructor(
                 workerRepository.getAllHireRequests().collectLatest { requests ->
                     val workers = workerRepository.getAllWorkers().firstOrNull() ?: fallbackWorkers
                     val empRequests = requests
-                        .filter { it.employerId == "local_employer" }
+                        .filter { it.employerId == (uid ?: "local_employer") }
                         .mapNotNull { req -> 
                             val worker = workers.find { it.id == req.workerId } ?: fallbackWorkers.find { it.id == req.workerId }
                             if (worker != null) {

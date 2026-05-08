@@ -142,23 +142,21 @@ class WorkerProfileViewModel @Inject constructor(
     }
 
     fun saveProfile(context: Context, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val userId = auth.currentUser?.uid ?: return
+        val userId = auth.currentUser?.uid
+        if (userId == null) {
+            val message = "Please sign in to save your profile"
+            _uiState.update { it.copy(message = message) }
+            onError(message)
+            return
+        }
         
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val currentState = _uiState.value
+                val now = System.currentTimeMillis()
                 var downloadUrl = currentState.profilePhotoUrl
                 
-                if (currentState.localPhotoUri != null) {
-                    val compressedImage = compressImage(context, currentState.localPhotoUri)
-                    if (compressedImage != null) {
-                        val storageRef = storage.reference.child("worker_profiles/$userId.jpg")
-                        storageRef.putBytes(compressedImage).await()
-                        downloadUrl = storageRef.downloadUrl.await().toString()
-                    }
-                }
-
                 val experienceInt = when(currentState.experienceYears) {
                     "0-1" -> 1
                     "1-3" -> 3
@@ -167,7 +165,7 @@ class WorkerProfileViewModel @Inject constructor(
                     else -> 0
                 }
 
-                val workerEntity = WorkerEntity(
+                var workerEntity = WorkerEntity(
                     id = userId,
                     name = currentState.fullName,
                     photoUrl = downloadUrl,
@@ -180,12 +178,48 @@ class WorkerProfileViewModel @Inject constructor(
                     totalRatings = currentState.totalJobs,
                     likes = currentState.likes,
                     isAvailable = currentState.isAvailable,
-                    lastUpdated = System.currentTimeMillis()
+                    lastUpdated = now
                 )
 
+                // Save locally first so changes persist even if Firebase fails.
                 repository.saveWorkerProfile(workerEntity)
+
+                var syncError: String? = null
+                if (currentState.localPhotoUri != null) {
+                    try {
+                        kotlinx.coroutines.withTimeout(10000L) {
+                            val compressedImage = compressImage(context, currentState.localPhotoUri)
+                            if (compressedImage != null) {
+                                val storageRef = storage.reference.child("worker_profiles/$userId.jpg")
+                                storageRef.putBytes(compressedImage).await()
+                                downloadUrl = storageRef.downloadUrl.await().toString()
+                                workerEntity = workerEntity.copy(photoUrl = downloadUrl, lastUpdated = System.currentTimeMillis())
+                                repository.saveWorkerProfile(workerEntity)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        syncError = e.message
+                    }
+                }
+
+                try {
+                    kotlinx.coroutines.withTimeout(5000L) {
+                        val updateRequest = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                            .setDisplayName(currentState.fullName)
+                            .build()
+                        auth.currentUser?.updateProfile(updateRequest)?.await()
+                    }
+                } catch (e: Exception) {
+                    if (syncError == null) {
+                        syncError = e.message
+                    }
+                }
                 _uiState.update { it.copy(
-                    message = "Profile Updated Successfully", 
+                    message = if (syncError == null) {
+                        "Profile Updated Successfully"
+                    } else {
+                        "Saved locally. Sync failed: $syncError"
+                    },
                     isEditMode = false,
                     profilePhotoUrl = downloadUrl,
                     localPhotoUri = null

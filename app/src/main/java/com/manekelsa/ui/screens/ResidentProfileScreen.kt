@@ -55,9 +55,19 @@ fun ResidentProfileScreen(
 
     val uid = auth.currentUser?.uid ?: "default"
     val sharedPref = context.getSharedPreferences("ResidentProfile_$uid", android.content.Context.MODE_PRIVATE)
-    var localName by remember { mutableStateOf(sharedPref.getString("name", displayName) ?: displayName) }
+    val savedName = sharedPref.getString("name", "") ?: ""
+    var localName by remember {
+        mutableStateOf(
+            if (savedName.isNotBlank()) {
+                savedName
+            } else {
+                uiState.userName?.takeIf { it.isNotBlank() } ?: displayName
+            }
+        )
+    }
     var address by remember { mutableStateOf(sharedPref.getString("address", "") ?: "") }
     var area by remember { mutableStateOf(sharedPref.getString("area", "") ?: "") }
+    var localPhone by remember { mutableStateOf(sharedPref.getString("phoneNumber", phoneNumber) ?: phoneNumber) }
     var isEditMode by remember { mutableStateOf(false) }
 
     Column(
@@ -68,6 +78,15 @@ fun ResidentProfileScreen(
             .padding(PaddingValues(16.dp)),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        LaunchedEffect(uiState.userName, displayName) {
+            if (savedName.isBlank() && localName.isBlank()) {
+                val resolved = uiState.userName?.takeIf { it.isNotBlank() } ?: displayName
+                if (resolved.isNotBlank()) {
+                    localName = resolved
+                }
+            }
+        }
+
         Text(
             text = stringResource(R.string.resident_profile),
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
@@ -83,11 +102,16 @@ fun ResidentProfileScreen(
         )
 
         OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = {},
+            value = localPhone,
+            onValueChange = { input ->
+                val normalized = input.filter { it.isDigit() }.take(10)
+                localPhone = normalized
+            },
             label = { Text(stringResource(R.string.phone_number)) },
             modifier = Modifier.fillMaxWidth(),
-            readOnly = true
+            readOnly = !isEditMode,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+            prefix = { Text("+91") }
         )
 
         OutlinedTextField(
@@ -114,7 +138,7 @@ fun ResidentProfileScreen(
                     val resident = mapOf(
                         "id" to id,
                         "name" to localName,
-                        "phoneNumber" to phoneNumber,
+                        "phoneNumber" to localPhone,
                         "area" to area,
                         "address" to address,
                         "updatedAt" to System.currentTimeMillis()
@@ -123,16 +147,19 @@ fun ResidentProfileScreen(
                         // Save locally first to guarantee functionality even if Firebase is unconfigured
                         sharedPref.edit()
                             .putString("name", localName)
+                            .putString("phoneNumber", localPhone)
                             .putString("area", area)
                             .putString("address", address)
                             .apply()
                             
                         try {
-                            val updateRequest = com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                                .setDisplayName(localName)
-                                .build()
-                            auth.currentUser?.updateProfile(updateRequest)?.await()
-                            database.reference.child("residents").child(id).setValue(resident).await()
+                            kotlinx.coroutines.withTimeoutOrNull(5000L) {
+                                val updateRequest = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                                    .setDisplayName(localName)
+                                    .build()
+                                auth.currentUser?.updateProfile(updateRequest)?.await()
+                                database.reference.child("residents").child(id).setValue(resident).await()
+                            }
                         } catch(e: Exception) {
                             // Firebase failed (likely rules or not enabled), but local save succeeded
                         }

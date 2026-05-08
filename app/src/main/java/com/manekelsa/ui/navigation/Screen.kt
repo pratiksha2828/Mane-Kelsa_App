@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.manekelsa.R
 
 sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: ImageVector) {
-    object Home : Screen("home", R.string.app_name, Icons.Default.Home)
+    object Home : Screen("home", R.string.nav_home, Icons.Default.Home)
     object Search : Screen("search", R.string.action_find_workers, Icons.Default.Search)
     object Profile : Screen("profile", R.string.action_my_profile, Icons.Default.Person)
     object CallHistory : Screen("call_history", R.string.action_call_history, Icons.Default.History)

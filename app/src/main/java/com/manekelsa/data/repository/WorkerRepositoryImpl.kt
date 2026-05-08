@@ -25,7 +25,8 @@ import javax.inject.Singleton
 class WorkerRepositoryImpl @Inject constructor(
     private val workerDao: WorkerDao,
     private val firebaseDatabase: FirebaseDatabase,
-    private val hireRequestDao: com.manekelsa.data.local.dao.HireRequestDao
+    private val hireRequestDao: com.manekelsa.data.local.dao.HireRequestDao,
+    private val auth: com.google.firebase.auth.FirebaseAuth
 ) : WorkerRepository {
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -214,27 +215,30 @@ class WorkerRepositoryImpl @Inject constructor(
 
     override suspend fun rateWorker(workerId: String) {
         withContext(Dispatchers.IO) {
+            val userId = auth.currentUser?.uid ?: return@withContext
+            val likeKey = "${userId}_$workerId"
+            val likesRef = firebaseDatabase.reference.child("worker_likes").child(likeKey)
+            val existing = likesRef.get().await()
+            if (existing.exists()) return@withContext
+
             val workerRef = firebaseDatabase.reference.child("workers").child(workerId)
-            
-            workerRef.child("averageRating").get().await().getValue(Float::class.java)?.let { currentRating ->
-                val newRating = (currentRating + 1f).coerceAtMost(5f)
-                val totalRatings = (workerRef.child("totalRatings").get().await().getValue(Int::class.java) ?: 0) + 1
-                
-                val updates = mapOf(
-                    "averageRating" to newRating,
-                    "totalRatings" to totalRatings,
-                    "lastUpdated" to System.currentTimeMillis()
-                )
-                
-                workerRef.updateChildren(updates).await()
-                
-                workerDao.getWorkerById(workerId)?.let { localWorker ->
-                    workerDao.updateWorker(localWorker.copy(
-                        averageRating = newRating,
-                        totalRatings = totalRatings,
-                        lastUpdated = updates["lastUpdated"] as Long
-                    ))
-                }
+            val currentLikes = workerRef.child("likes").get().await().getValue(Int::class.java) ?: 0
+            val newLikes = currentLikes + 1
+            val now = System.currentTimeMillis()
+
+            val updates = mapOf(
+                "likes" to newLikes,
+                "lastUpdated" to now
+            )
+
+            workerRef.updateChildren(updates).await()
+            likesRef.setValue(mapOf("timestamp" to now)).await()
+
+            workerDao.getWorkerById(workerId)?.let { localWorker ->
+                workerDao.updateWorker(localWorker.copy(
+                    likes = newLikes,
+                    lastUpdated = now
+                ))
             }
         }
     }
@@ -252,11 +256,13 @@ class WorkerRepositoryImpl @Inject constructor(
     }
 
     private suspend fun syncToFirebase(worker: WorkerEntity) {
-        firebaseDatabase.reference
-            .child("workers")
-            .child(worker.id)
-            .setValue(worker)
-            .await()
+        kotlinx.coroutines.withTimeoutOrNull(5000L) {
+            firebaseDatabase.reference
+                .child("workers")
+                .child(worker.id)
+                .setValue(worker)
+                .await()
+        }
     }
 
     override suspend fun createHireRequest(workerId: String, employerId: String, employerName: String) {

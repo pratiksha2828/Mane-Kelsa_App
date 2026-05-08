@@ -171,13 +171,25 @@ fun ProfileInfoSection(uiState: WorkerProfileUiState, onPhotoClick: () -> Unit, 
             singleLine = true
         )
 
+        val phoneEditable = uiState.isEditMode || uiState.phoneNumber.isBlank()
         OutlinedTextField(
             value = uiState.phoneNumber,
-            onValueChange = {},
-            label = { Text(stringResource(R.string.label_phone_readonly)) },
+            onValueChange = { phone ->
+                val normalized = phone.filter { it.isDigit() }.take(10)
+                viewModel.updateUiState { it.copy(phoneNumber = normalized) }
+            },
+            label = {
+                Text(
+                    stringResource(
+                        if (phoneEditable) R.string.phone_number else R.string.label_phone_readonly
+                    )
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
-            readOnly = true,
-            enabled = false,
+            readOnly = !phoneEditable,
+            enabled = phoneEditable || uiState.isEditMode,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            prefix = { Text("+91") },
             shape = RoundedCornerShape(12.dp),
             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) }
         )
@@ -230,6 +242,8 @@ fun ProfileInfoSection(uiState: WorkerProfileUiState, onPhotoClick: () -> Unit, 
 @Composable
 fun WorkDetailsSection(uiState: WorkerProfileUiState, viewModel: WorkerProfileViewModel) {
     val skillsOptions = SkillOption.all
+    val customSkills = uiState.selectedSkills.filterNot { skillsOptions.contains(it) }
+    val allSkillOptions = (skillsOptions + customSkills).distinct()
     var customSkill by remember { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -241,7 +255,7 @@ fun WorkDetailsSection(uiState: WorkerProfileUiState, viewModel: WorkerProfileVi
             horizontalSpacing = 8.dp,
             verticalSpacing = 4.dp
         ) {
-            skillsOptions.forEach { skillId ->
+            allSkillOptions.forEach { skillId ->
                 val isSelected = uiState.selectedSkills.contains(skillId)
                 val labelRes = SkillOption.labelRes(skillId)
                 FilterChip(

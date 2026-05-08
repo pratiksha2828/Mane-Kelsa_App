@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Mane-Kelsa</string>
+    <string name="nav_home">Home</string>
 
     <!-- General -->
     <string name="welcome">Hello 👋</string>
@@ -88,6 +89,9 @@
     <string name="call_now">Call Now</string>
     <string name="rate_service">Rate Service</string>
     <string name="rate_employed_only">You can only rate workers you have employed.</string>
+    <string name="liked">Liked</string>
+    <string name="submit">Submit</string>
+    <string name="thanks_for_rating">Thanks for rating.</string>
 
     <!-- Profile Screen -->
     <string name="profile_information">Profile Information</string>

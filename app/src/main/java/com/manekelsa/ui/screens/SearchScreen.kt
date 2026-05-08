@@ -60,6 +60,8 @@ fun SearchScreen(
         }
     }
     val uiState by viewModel.uiState.collectAsState()
+    val likedWorkers by viewModel.likedWorkers.collectAsState()
+    val ratedWorkers by viewModel.ratedWorkers.collectAsState()
     val context = LocalContext.current
     val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -165,15 +167,10 @@ fun SearchScreen(
                             WorkerResultCard(
                                 worker = worker,
                                 hireStatus = uiState.hireRequests[worker.id],
+                                isThumbed = likedWorkers.contains(worker.id),
                                 onCall = { viewModel.onCallWorker(worker) },
                                 onCardClick = { selectedWorker = worker },
-                                onRate = { 
-                                    if (uiState.hireRequests[worker.id] == "ACCEPTED") {
-                                        viewModel.onRateWorker(worker.id)
-                                    } else {
-                                        android.widget.Toast.makeText(context, context.getString(R.string.rate_employed_only), android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
+                                onThumbsUp = { viewModel.onThumbsUp(worker.id) },
                                 onRequestHire = { viewModel.onRequestHire(worker.id) }
                             )
                         }
@@ -183,15 +180,12 @@ fun SearchScreen(
                         WorkerProfileBottomSheet(
                             worker = worker,
                             hireStatus = uiState.hireRequests[worker.id],
+                            isThumbed = likedWorkers.contains(worker.id),
+                            hasStarRated = ratedWorkers.contains(worker.id),
                             onDismiss = { selectedWorker = null },
                             onCall = { viewModel.onCallWorker(worker) },
-                            onRate = {
-                                if (uiState.hireRequests[worker.id] == "ACCEPTED") {
-                                    viewModel.onRateWorker(worker.id)
-                                } else {
-                                    android.widget.Toast.makeText(context, context.getString(R.string.rate_employed_only), android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            },
+                            onThumbsUp = { viewModel.onThumbsUp(worker.id) },
+                            onStarRate = { rating -> viewModel.onStarRating(worker.id, rating) },
                             onRequestHire = { viewModel.onRequestHire(worker.id) }
                         )
                     }
@@ -314,12 +308,15 @@ fun CategoryChipsRow(
 fun WorkerResultCard(
     worker: WorkerEntity,
     hireStatus: String?,
+    isThumbed: Boolean,
     onCardClick: () -> Unit,
     onCall: () -> Unit,
-    onRate: () -> Unit,
+    onThumbsUp: () -> Unit,
     onRequestHire: () -> Unit
 ) {
     val context = LocalContext.current
+    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+    val isSelf = currentUserId != null && worker.id == currentUserId
     Card(
         onClick = onCardClick,
         modifier = Modifier
@@ -450,8 +447,12 @@ fun WorkerResultCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onRate, enabled = worker.isAvailable) {
-                    Icon(Icons.Default.ThumbUp, contentDescription = stringResource(R.string.rate_service), tint = if (worker.isAvailable) MaterialTheme.colorScheme.primary else Color.Gray)
+                IconButton(onClick = onThumbsUp, enabled = worker.isAvailable && !isThumbed) {
+                    Icon(
+                        Icons.Default.ThumbUp,
+                        contentDescription = stringResource(R.string.rate_service),
+                        tint = if (worker.isAvailable && !isThumbed) MaterialTheme.colorScheme.primary else Color.Gray
+                    )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
@@ -471,7 +472,7 @@ fun WorkerResultCard(
                 Button(
                     onClick = onRequestHire,
                     modifier = Modifier.height(40.dp),
-                    enabled = worker.isAvailable && hireStatus == null,
+                    enabled = (worker.isAvailable || isSelf) && hireStatus == null,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         disabledContainerColor = Color.LightGray
@@ -552,12 +553,18 @@ fun ErrorState(message: String, onRetry: () -> Unit) {
 fun WorkerProfileBottomSheet(
     worker: WorkerEntity,
     hireStatus: String?,
+    isThumbed: Boolean,
+    hasStarRated: Boolean,
     onDismiss: () -> Unit,
     onCall: () -> Unit,
-    onRate: () -> Unit,
+    onThumbsUp: () -> Unit,
+    onStarRate: (Int) -> Unit,
     onRequestHire: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+    val isSelf = currentUserId != null && worker.id == currentUserId
+    var selectedStars by remember { mutableStateOf(0) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -635,7 +642,7 @@ fun WorkerProfileBottomSheet(
                 ) {
                     Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.AutoMirrored.Filled.PhoneCallback, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text((worker.likes + 5).toString(), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+                        Text(worker.likes.toString(), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
                         Text(stringResource(R.string.stat_calls), style = MaterialTheme.typography.labelSmall)
                     }
                 }
@@ -647,13 +654,13 @@ fun WorkerProfileBottomSheet(
             ) {
                 val context = LocalContext.current
                 OutlinedButton(
-                    onClick = onRate,
-                    enabled = worker.isAvailable,
+                    onClick = onThumbsUp,
+                    enabled = !isThumbed,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.rate_service))
+                    Text(if (isThumbed) stringResource(R.string.liked) else stringResource(R.string.rate_service))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Button(
@@ -674,12 +681,57 @@ fun WorkerProfileBottomSheet(
                 }
             }
 
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.stat_rating),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (1..5).forEach { star ->
+                        IconButton(
+                            onClick = { selectedStars = star },
+                            enabled = hireStatus == "ACCEPTED" && !hasStarRated
+                        ) {
+                            Icon(
+                                imageVector = if (selectedStars >= star) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = null,
+                                tint = if (selectedStars >= star) Color(0xFFFFB300) else Color.Gray
+                            )
+                        }
+                    }
+                }
+                Button(
+                    onClick = { if (selectedStars > 0) onStarRate(selectedStars) },
+                    enabled = hireStatus == "ACCEPTED" && !hasStarRated && selectedStars > 0,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.submit))
+                }
+                if (hireStatus != "ACCEPTED") {
+                    Text(
+                        text = stringResource(R.string.rate_employed_only),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else if (hasStarRated) {
+                    Text(
+                        text = stringResource(R.string.thanks_for_rating),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             Button(
                 onClick = onRequestHire,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
-                enabled = worker.isAvailable && hireStatus == null,
+                enabled = (worker.isAvailable || isSelf) && hireStatus == null,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     disabledContainerColor = Color.LightGray
@@ -697,58 +749,60 @@ fun WorkerProfileBottomSheet(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Reviews Section
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = stringResource(R.string.reviews_title),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                )
-                
-                val reviews = listOf(R.string.review_1, R.string.review_2, R.string.review_3, R.string.review_4, R.string.review_5)
-                // Pick 2 pseudo-random reviews based on worker id hash
-                val hash = worker.id.hashCode()
-                val reviewIndex1 = Math.abs(hash) % reviews.size
-                val reviewIndex2 = (Math.abs(hash) + 1) % reviews.size
-                
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .glassmorphism(cornerRadius = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+            if (worker.totalRatings > 0) {
+                // Reviews Section
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(reviews[reviewIndex1]),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row {
-                            repeat(5) { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp)) }
+                    Text(
+                        text = stringResource(R.string.reviews_title),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                    
+                    val reviews = listOf(R.string.review_1, R.string.review_2, R.string.review_3, R.string.review_4, R.string.review_5)
+                    // Pick 2 pseudo-random reviews based on worker id hash
+                    val hash = worker.id.hashCode()
+                    val reviewIndex1 = Math.abs(hash) % reviews.size
+                    val reviewIndex2 = (Math.abs(hash) + 1) % reviews.size
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassmorphism(cornerRadius = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(reviews[reviewIndex1]),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row {
+                                repeat(5) { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp)) }
+                            }
                         }
                     }
-                }
-                
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .glassmorphism(cornerRadius = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(reviews[reviewIndex2]),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row {
-                            repeat(4) { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp)) }
-                            Icon(Icons.Default.Star, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassmorphism(cornerRadius = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(reviews[reviewIndex2]),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row {
+                                repeat(4) { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp)) }
+                                Icon(Icons.Default.Star, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            }
                         }
                     }
                 }

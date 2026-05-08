@@ -25,11 +25,15 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val workerRepository: WorkerRepository,
-    private val callLogRepository: CallLogRepository
+    private val callLogRepository: CallLogRepository,
+    private val ratingRepository: com.manekelsa.domain.repository.RatingRepository
 ) : ViewModel() {
 
-    private val localEmployerId = "local_employer"
-    private val localEmployerName = "Local Employer"
+    private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    private val localEmployerId: String
+        get() = auth.currentUser?.uid ?: "local_employer"
+    private val localEmployerName: String
+        get() = auth.currentUser?.displayName.takeIf { !it.isNullOrBlank() } ?: "Local Employer"
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("All")
@@ -55,6 +59,12 @@ class SearchViewModel @Inject constructor(
         .map { requests -> requests.associate { it.workerId to it.status } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
+    private val _likedWorkers = MutableStateFlow<Set<String>>(emptySet())
+    val likedWorkers: StateFlow<Set<String>> = _likedWorkers.asStateFlow()
+
+    private val _ratedWorkers = MutableStateFlow<Set<String>>(emptySet())
+    val ratedWorkers: StateFlow<Set<String>> = _ratedWorkers.asStateFlow()
+
     // IMMEDIATE UI STATE for the search bar
     private val _baseUiState = combine(
         _searchQuery,
@@ -77,7 +87,7 @@ class SearchViewModel @Inject constructor(
     val uiState: StateFlow<SearchUiState> = _baseUiState.flatMapLatest { state ->
         // Debounce only the search query for filtering, but emit the immediate query in the state
         _allWorkers.map { allWorkers ->
-            val data = if (allWorkers.isEmpty() && state.error == null) fallbackWorkers else allWorkers
+            val data = (allWorkers + fallbackWorkers).distinctBy { it.id }
             state.copy(
                 workers = filterWorkers(data, state.searchQuery, state.selectedCategory),
                 isLoading = data.isEmpty() && state.error == null
@@ -89,6 +99,21 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             workerRepository.getRemoteWorkers().collect { }
         }
+        viewModelScope.launch {
+            _allWorkers.collectLatest { workers ->
+                refreshRatedWorkers(workers)
+            }
+        }
+    }
+
+    private suspend fun refreshRatedWorkers(workers: List<WorkerEntity>) {
+        val ratedSet = mutableSetOf<String>()
+        workers.forEach { worker ->
+            if (ratingRepository.hasUserRatedToday(worker.id)) {
+                ratedSet.add(worker.id)
+            }
+        }
+        _ratedWorkers.value = ratedSet
     }
 
     private fun filterWorkers(
@@ -147,9 +172,21 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun onRateWorker(workerId: String) {
+    fun onThumbsUp(workerId: String) {
         viewModelScope.launch {
-            workerRepository.rateWorker(workerId)
+            if (!_likedWorkers.value.contains(workerId)) {
+                workerRepository.rateWorker(workerId)
+                _likedWorkers.value = _likedWorkers.value + workerId
+            }
+        }
+    }
+
+    fun onStarRating(workerId: String, rating: Int) {
+        viewModelScope.launch {
+            val result = ratingRepository.updateRating(workerId, rating.toFloat())
+            if (result.isSuccess) {
+                _ratedWorkers.value = _ratedWorkers.value + workerId
+            }
         }
     }
 

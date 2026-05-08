@@ -147,6 +147,8 @@ fun WorkerProfileFormScreen(
                 )
 
                 val skillsOptions = SkillOption.all
+                val customSkills = uiState.selectedSkills.filterNot { skillsOptions.contains(it) }
+                val allSkillOptions = (skillsOptions + customSkills).distinct()
 
                 var customSkill by remember { mutableStateOf("") }
 
@@ -161,7 +163,7 @@ fun WorkerProfileFormScreen(
                         horizontalSpacing = 8.dp,
                         verticalSpacing = 4.dp
                     ) {
-                        skillsOptions.forEach { skillId ->
+                        allSkillOptions.forEach { skillId ->
                             val labelRes = SkillOption.labelRes(skillId)
                             FilterChip(
                                 selected = uiState.selectedSkills.contains(skillId),
@@ -202,15 +204,20 @@ fun WorkerProfileFormScreen(
                     }
                 }
 
+                val phoneEditable = uiState.isEditMode || uiState.phoneNumber.isBlank()
                 OutlinedTextField(
                     value = uiState.phoneNumber,
-                    onValueChange = { phone -> viewModel.updateUiState { it.copy(phoneNumber = phone) } },
+                    onValueChange = { phone ->
+                        val normalized = phone.filter { it.isDigit() }.takeLast(10)
+                        viewModel.updateUiState { it.copy(phoneNumber = normalized) }
+                    },
                     label = { Text(stringResource(R.string.phone_number)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium,
-                    readOnly = true
+                    prefix = { Text("+91") },
+                    readOnly = !phoneEditable
                 )
 
                 OutlinedTextField(

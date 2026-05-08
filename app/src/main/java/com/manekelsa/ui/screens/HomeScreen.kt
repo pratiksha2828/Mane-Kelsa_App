@@ -51,6 +51,8 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchViewModel: SearchViewModel = hiltViewModel()
     val searchUiState by searchViewModel.uiState.collectAsState()
+    val likedWorkers by searchViewModel.likedWorkers.collectAsState()
+    val ratedWorkers by searchViewModel.ratedWorkers.collectAsState()
     var selectedWorker by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WorkerEntity?>(null) }
     val context = LocalContext.current
 
@@ -115,15 +117,12 @@ fun HomeScreen(
             WorkerProfileBottomSheet(
                 worker = worker,
                 hireStatus = searchUiState.hireRequests[worker.id],
+                isThumbed = likedWorkers.contains(worker.id),
+                hasStarRated = ratedWorkers.contains(worker.id),
                 onDismiss = { selectedWorker = null },
                 onCall = { searchViewModel.onCallWorker(worker) },
-                onRate = {
-                    if (searchUiState.hireRequests[worker.id] == "ACCEPTED") {
-                        searchViewModel.onRateWorker(worker.id)
-                    } else {
-                        android.widget.Toast.makeText(context, context.getString(R.string.rate_employed_only), android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                },
+                onThumbsUp = { searchViewModel.onThumbsUp(worker.id) },
+                onStarRate = { rating -> searchViewModel.onStarRating(worker.id, rating) },
                 onRequestHire = { searchViewModel.onRequestHire(worker.id) }
             )
         }
