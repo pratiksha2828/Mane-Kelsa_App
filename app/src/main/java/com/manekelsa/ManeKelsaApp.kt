@@ -42,6 +42,15 @@ class ManeKelsaApp : Application(), Configuration.Provider {
         val workersRef = database.reference.child("workers")
         CoroutineScope(Dispatchers.IO).launch {
             val snapshot = workersRef.get().await()
+            snapshot.children.forEach { child ->
+                val name = child.child("name").getValue(String::class.java)
+                    ?: child.child("fullName").getValue(String::class.java).orEmpty()
+                val phone = child.child("phoneNumber").getValue(String::class.java).orEmpty()
+                
+                if (name.trim().equals("Pratiksha Bhat", ignoreCase = true) || phone.trim() == "5555555555") {
+                    child.ref.removeValue().await()
+                }
+            }
             if (snapshot.hasChildren()) {
                 val hasInvalidNames = snapshot.children.any { child ->
                     val name = child.child("name").getValue(String::class.java)

@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.manekelsa" />
-                  <option name="mobileSdkAppId" value="1:600856036967:android:b415d6248b8ea86ab7b6c2" />
-                  <option name="projectId" value="manekelsaapp-cf37c" />
-                  <option name="projectNumber" value="600856036967" />
+                  <option name="appId" value="PLACEHOLDER" />
+                  <option name="mobileSdkAppId" value="" />
+                  <option name="projectId" value="" />
+                  <option name="projectNumber" value="" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

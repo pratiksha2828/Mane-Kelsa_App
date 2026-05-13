@@ -102,6 +102,8 @@ class WorkerListViewModel @Inject constructor(
 
         allWorkers
             .asSequence()
+            .filterNot { isBlockedWorker(it) }
+            .filterNot { isCurrentUser(it) }
             .filter { worker ->
                 val matchesQuery = normalizedQuery.isBlank() ||
                     SearchMatcher.matchesQuery(worker, normalizedQuery)
@@ -184,5 +186,26 @@ class WorkerListViewModel @Inject constructor(
                 _ratedWorkersToday.value += workerId
             }
         }
+    }
+
+    private fun isBlockedWorker(worker: WorkerEntity): Boolean {
+        val normalizedName = worker.name.trim()
+        val normalizedArea = worker.area.trim().lowercase()
+        val normalizedSkills = worker.skillsList.map { it.trim().lowercase() }
+        val isNameMatch = normalizedName.equals("Pratiksha Bhat", ignoreCase = true) ||
+            normalizedName.equals("Pratiksha Baht", ignoreCase = true)
+        val isPhoneMatch = worker.phoneNumber.trim() == "5555555555"
+        val isAreaMatch = normalizedArea.contains("vijayanagar")
+        val isSkillMatch = normalizedSkills.contains("cook") && normalizedSkills.contains("caretaker")
+        val isWageMatch = worker.dailyWage >= 3000.0
+        val isRatingMatch = worker.averageRating >= 4.9f && worker.totalRatings == 1
+
+        if (isPhoneMatch) return true
+        return isNameMatch && isAreaMatch && isSkillMatch && isWageMatch && isRatingMatch
+    }
+
+    private fun isCurrentUser(worker: WorkerEntity): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        return worker.id == uid
     }
 }

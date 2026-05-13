@@ -15,6 +15,9 @@ import javax.inject.Inject
 data class SearchUiState(
     val searchQuery: String = "",
     val selectedCategory: String = "All",
+    val minPrice: String = "",
+    val maxPrice: String = "",
+    val sortByPriceAsc: Boolean? = null,
     val workers: List<WorkerEntity> = emptyList(),
     val contactedWorkerIds: Set<String> = emptySet(),
     val hireRequests: Map<String, String> = emptyMap(),
@@ -37,6 +40,9 @@ class SearchViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("All")
+    private val _minPrice = MutableStateFlow("")
+    private val _maxPrice = MutableStateFlow("")
+    private val _sortByPriceAsc = MutableStateFlow<Boolean?>(null)
     private val _error = MutableStateFlow<String?>(null)
 
     private val fallbackWorkers: List<WorkerEntity> = com.manekelsa.data.local.MockData.fallbackWorkers
@@ -69,13 +75,27 @@ class SearchViewModel @Inject constructor(
     private val _baseUiState = combine(
         _searchQuery,
         _selectedCategory,
+        _minPrice,
+        _maxPrice,
+        _sortByPriceAsc,
         _contactedWorkerIds,
         _hireRequests,
         _error
-    ) { query, category, contactedIds, requests, error ->
+    ) { args ->
+        val query = args[0] as String
+        val category = args[1] as String
+        val minPrice = args[2] as String
+        val maxPrice = args[3] as String
+        val sortByPriceAsc = args[4] as Boolean?
+        val contactedIds = args[5] as Set<String>
+        val requests = args[6] as Map<String, String>
+        val error = args[7] as String?
         SearchUiState(
             searchQuery = query,
             selectedCategory = category,
+            minPrice = minPrice,
+            maxPrice = maxPrice,
+            sortByPriceAsc = sortByPriceAsc,
             contactedWorkerIds = contactedIds,
             hireRequests = requests,
             isLoading = false,
@@ -87,9 +107,19 @@ class SearchViewModel @Inject constructor(
     val uiState: StateFlow<SearchUiState> = _baseUiState.flatMapLatest { state ->
         // Debounce only the search query for filtering, but emit the immediate query in the state
         _allWorkers.map { allWorkers ->
-            val data = (allWorkers + fallbackWorkers).distinctBy { it.id }
+            val data = (allWorkers + fallbackWorkers)
+                .distinctBy { it.id }
+                .filterNot { isBlockedWorker(it) }
+                .filterNot { isCurrentUser(it) }
             state.copy(
-                workers = filterWorkers(data, state.searchQuery, state.selectedCategory),
+                workers = filterWorkers(
+                    data,
+                    state.searchQuery,
+                    state.selectedCategory,
+                    state.minPrice,
+                    state.maxPrice,
+                    state.sortByPriceAsc
+                ),
                 isLoading = data.isEmpty() && state.error == null
             )
         }
@@ -119,15 +149,20 @@ class SearchViewModel @Inject constructor(
     private fun filterWorkers(
         workers: List<WorkerEntity>,
         searchText: String,
-        selectedSkill: String
+        selectedSkill: String,
+        minPrice: String,
+        maxPrice: String,
+        sortByPriceAsc: Boolean?
     ): List<WorkerEntity> {
         val normalizedQuery = SearchMatcher.normalizeQuery(searchText)
+        val minValue = minPrice.toDoubleOrNull()
+        val maxValue = maxPrice.toDoubleOrNull()
         val skillFiltered = workers.filter { worker ->
-            SearchMatcher.matchesSkill(worker, selectedSkill)
+            SearchMatcher.matchesSkill(worker, selectedSkill) && matchesPrice(worker, minValue, maxValue)
         }
 
         if (normalizedQuery.isBlank()) {
-            return sortWorkers(skillFiltered)
+            return sortWorkers(skillFiltered, sortByPriceAsc)
         }
 
         val exactMatches = skillFiltered.filter { worker ->
@@ -135,7 +170,7 @@ class SearchViewModel @Inject constructor(
         }
 
         val results = if (exactMatches.isNotEmpty()) {
-            sortWorkers(exactMatches)
+            sortWorkers(exactMatches, sortByPriceAsc)
         } else {
             skillFiltered
                 .map { worker -> worker to SearchMatcher.similarityScore(worker, normalizedQuery) }
@@ -151,11 +186,20 @@ class SearchViewModel @Inject constructor(
         return results
     }
 
-    private fun sortWorkers(workers: List<WorkerEntity>): List<WorkerEntity> {
-        return workers.sortedWith(
-            compareByDescending<WorkerEntity> { it.isAvailable }
-                .thenByDescending { it.averageRating }
-        )
+    private fun sortWorkers(workers: List<WorkerEntity>, sortByPriceAsc: Boolean?): List<WorkerEntity> {
+        val baseSort = compareByDescending<WorkerEntity> { it.isAvailable }
+        return when (sortByPriceAsc) {
+            true -> workers.sortedWith(baseSort.thenBy { it.dailyWage })
+            false -> workers.sortedWith(baseSort.thenByDescending { it.dailyWage })
+            null -> workers.sortedWith(baseSort.thenByDescending { it.averageRating })
+        }
+    }
+
+    private fun matchesPrice(worker: WorkerEntity, minValue: Double?, maxValue: Double?): Boolean {
+        val wage = worker.dailyWage
+        if (minValue != null && wage < minValue) return false
+        if (maxValue != null && wage > maxValue) return false
+        return true
     }
 
     fun onSearchQueryChange(query: String) {
@@ -164,6 +208,22 @@ class SearchViewModel @Inject constructor(
 
     fun onCategorySelect(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun onMinPriceChange(input: String) {
+        _minPrice.value = input.filter { it.isDigit() }
+    }
+
+    fun onMaxPriceChange(input: String) {
+        _maxPrice.value = input.filter { it.isDigit() }
+    }
+
+    fun togglePriceSort() {
+        _sortByPriceAsc.value = when (_sortByPriceAsc.value) {
+            null -> true
+            true -> false
+            false -> null
+        }
     }
 
     fun onCallWorker(worker: WorkerEntity) {
@@ -198,5 +258,26 @@ class SearchViewModel @Inject constructor(
 
     fun retry() {
         _error.value = null
+    }
+
+    private fun isBlockedWorker(worker: WorkerEntity): Boolean {
+        val normalizedName = worker.name.trim()
+        val normalizedArea = worker.area.trim().lowercase()
+        val normalizedSkills = worker.skillsList.map { it.trim().lowercase() }
+        val isNameMatch = normalizedName.equals("Pratiksha Bhat", ignoreCase = true) ||
+            normalizedName.equals("Pratiksha Baht", ignoreCase = true)
+        val isPhoneMatch = worker.phoneNumber.trim() == "5555555555"
+        val isAreaMatch = normalizedArea.contains("vijayanagar")
+        val isSkillMatch = normalizedSkills.contains("cook") && normalizedSkills.contains("caretaker")
+        val isWageMatch = worker.dailyWage >= 3000.0
+        val isRatingMatch = worker.averageRating >= 4.9f && worker.totalRatings == 1
+
+        if (isPhoneMatch) return true
+        return isNameMatch && isAreaMatch && isSkillMatch && isWageMatch && isRatingMatch
+    }
+
+    private fun isCurrentUser(worker: WorkerEntity): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        return worker.id == uid
     }
 }

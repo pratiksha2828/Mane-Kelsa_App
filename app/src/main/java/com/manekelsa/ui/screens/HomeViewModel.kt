@@ -89,7 +89,15 @@ class HomeViewModel @Inject constructor(
                         worker.copy(name = normalizedName)
                     }
 
-                    val data = (sanitizedWorkers + fallbackWorkers).distinctBy { it.id }
+                    val baseWorkers = if (sanitizedWorkers.isNotEmpty()) {
+                        sanitizedWorkers
+                    } else {
+                        fallbackWorkers
+                    }
+                    val data = baseWorkers
+                        .distinctBy { it.id }
+                        .filterNot { isBlockedWorker(it) }
+                        .filterNot { it.id == uid }
                     val available = data.filter { it.isAvailable }
                     _uiState.value = _uiState.value.copy(
                         availableWorkersCount = available.size,
@@ -138,5 +146,21 @@ class HomeViewModel @Inject constructor(
 
     fun rejectRequest(requestId: String) {
         viewModelScope.launch { workerRepository.updateRequestStatus(requestId, "REJECTED") }
+    }
+
+    private fun isBlockedWorker(worker: WorkerEntity): Boolean {
+        val normalizedName = worker.name.trim()
+        val normalizedArea = worker.area.trim().lowercase()
+        val normalizedSkills = worker.skillsList.map { it.trim().lowercase() }
+        val isNameMatch = normalizedName.equals("Pratiksha Bhat", ignoreCase = true) ||
+            normalizedName.equals("Pratiksha Baht", ignoreCase = true)
+        val isPhoneMatch = worker.phoneNumber.trim() == "5555555555"
+        val isAreaMatch = normalizedArea.contains("vijayanagar")
+        val isSkillMatch = normalizedSkills.contains("cook") && normalizedSkills.contains("caretaker")
+        val isWageMatch = worker.dailyWage >= 3000.0
+        val isRatingMatch = worker.averageRating >= 4.9f && worker.totalRatings == 1
+
+        if (isPhoneMatch) return true
+        return isNameMatch && isAreaMatch && isSkillMatch && isWageMatch && isRatingMatch
     }
 }

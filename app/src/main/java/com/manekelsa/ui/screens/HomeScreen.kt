@@ -89,9 +89,9 @@ fun HomeScreen(
 
         RoleModeCard(userRole = userRole, onChangeRole = onChangeRole)
 
-        if (uiState.isProfileComplete) {
+        if (userRole == UserRole.HIRER || userRole == UserRole.WORKER) {
             StatsRow(count = uiState.availableWorkersCount)
-        } else {
+        } else if (!uiState.isProfileComplete) {
             CompleteProfileBanner(onClick = onNavigateToProfile)
         }
 

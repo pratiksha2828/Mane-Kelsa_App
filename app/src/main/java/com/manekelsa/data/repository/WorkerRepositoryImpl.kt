@@ -7,6 +7,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.manekelsa.data.local.dao.WorkerDao
 import com.manekelsa.data.local.entity.WorkerEntity
+import com.manekelsa.data.local.entity.HireRequestEntity
 import com.manekelsa.domain.repository.WorkerRepository
 import com.manekelsa.utils.WorkerNameNormalizer
 import kotlinx.coroutines.CoroutineScope
@@ -29,8 +30,15 @@ class WorkerRepositoryImpl @Inject constructor(
     private val auth: com.google.firebase.auth.FirebaseAuth
 ) : WorkerRepository {
 
+    companion object {
+        private const val BLOCKED_WORKER_NAME = "Pratiksha Bhat"
+        private const val BLOCKED_WORKER_NAME_ALT = "Pratiksha Baht"
+        private const val BLOCKED_WORKER_PHONE = "5555555555"
+    }
+
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var availabilityListener: ValueEventListener? = null
+    private var hireRequestsListener: ChildEventListener? = null
 
 
     override suspend fun saveWorkerProfile(worker: WorkerEntity) {
@@ -59,6 +67,7 @@ class WorkerRepositoryImpl @Inject constructor(
         
         val listener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                if (shouldRemoveWorker(snapshot)) return
                 mapSnapshotToWorker(snapshot)?.let { worker ->
                     repositoryScope.launch {
                         workerDao.insertWorker(worker)
@@ -68,6 +77,7 @@ class WorkerRepositoryImpl @Inject constructor(
             }
 
             override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                if (shouldRemoveWorker(snapshot)) return
                 mapSnapshotToWorker(snapshot)?.let { worker ->
                     repositoryScope.launch {
                         workerDao.insertWorker(worker)
@@ -101,8 +111,7 @@ class WorkerRepositoryImpl @Inject constructor(
             val id = snapshot.child("id").getValue(String::class.java) ?: ""
             val name = snapshot.child("name").getValue(String::class.java)
                 ?: snapshot.child("fullName").getValue(String::class.java).orEmpty()
-            val photoUrl = snapshot.child("photoUrl").getValue(String::class.java)
-                ?: snapshot.child("profilePhotoUrl").getValue(String::class.java)
+            val phoneNumber = snapshot.child("phoneNumber").getValue(String::class.java) ?: ""
             val skillsList = snapshot.child("skillsList").children.mapNotNull { it.getValue(String::class.java) }
                 .ifEmpty { snapshot.child("skills").children.mapNotNull { it.getValue(String::class.java) } }
             val dailyWage = snapshot.child("dailyWage").getValue(Double::class.java)
@@ -113,11 +122,16 @@ class WorkerRepositoryImpl @Inject constructor(
             val experience = snapshot.child("experience").getValue(Int::class.java)
                 ?: snapshot.child("experienceYears").getValue(String::class.java)?.toIntOrNull()
                 ?: 0
-            val phoneNumber = snapshot.child("phoneNumber").getValue(String::class.java) ?: ""
-            val normalizedName = WorkerNameNormalizer.normalize(name, id, phoneNumber)
-            val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: false
             val averageRating = snapshot.child("averageRating").getValue(Float::class.java) ?: 0f
             val totalRatings = snapshot.child("totalRatings").getValue(Int::class.java) ?: 0
+
+            if (isTargetWorker(name, phoneNumber, area, dailyWage, experience, skillsList, averageRating, totalRatings)) {
+                return null
+            }
+            val photoUrl = snapshot.child("photoUrl").getValue(String::class.java)
+                ?: snapshot.child("profilePhotoUrl").getValue(String::class.java)
+            val normalizedName = WorkerNameNormalizer.normalize(name, id, phoneNumber)
+            val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: false
             val likes = snapshot.child("likes").getValue(Int::class.java) ?: 0
             val lastUpdated = snapshot.child("lastUpdated").getValue(Long::class.java) ?: 0L
 
@@ -276,10 +290,17 @@ class WorkerRepositoryImpl @Inject constructor(
         )
         withContext(Dispatchers.IO) {
             hireRequestDao.insertRequest(request)
+            firebaseDatabase.reference
+                .child("hire_requests")
+                .child(workerId)
+                .child(request.id)
+                .setValue(request)
+                .await()
         }
     }
 
     override fun getAllHireRequests(): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>> {
+        startHireRequestsSyncIfNeeded()
         return hireRequestDao.getAllHireRequests()
     }
 
@@ -294,6 +315,138 @@ class WorkerRepositoryImpl @Inject constructor(
     override suspend fun updateRequestStatus(requestId: String, status: String) {
         withContext(Dispatchers.IO) {
             hireRequestDao.updateRequestStatus(requestId, status)
+            val request = hireRequestDao.getRequestById(requestId)
+            if (request != null) {
+                firebaseDatabase.reference
+                    .child("hire_requests")
+                    .child(request.workerId)
+                    .child(request.id)
+                    .child("status")
+                    .setValue(status)
+                    .await()
+            }
+        }
+    }
+
+    private fun shouldRemoveWorker(snapshot: DataSnapshot): Boolean {
+        val name = snapshot.child("name").getValue(String::class.java)
+            ?: snapshot.child("fullName").getValue(String::class.java).orEmpty()
+        val phoneNumber = snapshot.child("phoneNumber").getValue(String::class.java) ?: ""
+        val skillsList = snapshot.child("skillsList").children.mapNotNull { it.getValue(String::class.java) }
+            .ifEmpty { snapshot.child("skills").children.mapNotNull { it.getValue(String::class.java) } }
+        val dailyWage = snapshot.child("dailyWage").getValue(Double::class.java)
+            ?: snapshot.child("dailyWage").getValue(String::class.java)?.toDoubleOrNull()
+            ?: 0.0
+        val area = snapshot.child("area").getValue(String::class.java)
+            ?: snapshot.child("areaStreet").getValue(String::class.java).orEmpty()
+        val experience = snapshot.child("experience").getValue(Int::class.java)
+            ?: snapshot.child("experienceYears").getValue(String::class.java)?.toIntOrNull()
+            ?: 0
+        val averageRating = snapshot.child("averageRating").getValue(Float::class.java) ?: 0f
+        val totalRatings = snapshot.child("totalRatings").getValue(Int::class.java) ?: 0
+
+        if (isTargetWorker(name, phoneNumber, area, dailyWage, experience, skillsList, averageRating, totalRatings)) {
+            val id = snapshot.child("id").getValue(String::class.java)
+                ?: snapshot.key
+                ?: ""
+            snapshot.ref.removeValue()
+            if (id.isNotBlank()) {
+                repositoryScope.launch {
+                    workerDao.getWorkerById(id)?.let { workerDao.deleteWorker(it) }
+                }
+            }
+            return true
+        }
+        return false
+    }
+
+    private fun isTargetWorker(
+        name: String,
+        phoneNumber: String,
+        area: String,
+        dailyWage: Double,
+        experience: Int,
+        skills: List<String>,
+        averageRating: Float,
+        totalRatings: Int
+    ): Boolean {
+        val normalizedName = name.trim()
+        val normalizedArea = area.trim().lowercase()
+        val normalizedSkills = skills.map { it.trim().lowercase() }
+        val isNameMatch = normalizedName.equals(BLOCKED_WORKER_NAME, ignoreCase = true) ||
+            normalizedName.equals(BLOCKED_WORKER_NAME_ALT, ignoreCase = true)
+        val isPhoneMatch = phoneNumber.trim() == BLOCKED_WORKER_PHONE
+        val isAreaMatch = normalizedArea.contains("vijayanagar")
+        val isSkillMatch = normalizedSkills.contains("cook") && normalizedSkills.contains("caretaker")
+        val isWageMatch = dailyWage >= 3000.0
+        val isExperienceMatch = experience <= 1
+        val isRatingMatch = averageRating >= 4.9f && totalRatings == 1
+
+        if (isPhoneMatch) return true
+        return isNameMatch && isAreaMatch && isSkillMatch && isWageMatch && isExperienceMatch && isRatingMatch
+    }
+
+    private fun startHireRequestsSyncIfNeeded() {
+        if (hireRequestsListener != null) return
+        val uid = auth.currentUser?.uid ?: return
+        val requestsRef = firebaseDatabase.reference.child("hire_requests").child(uid)
+
+        hireRequestsListener = object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                mapSnapshotToHireRequest(snapshot, uid)?.let { request ->
+                    repositoryScope.launch {
+                        hireRequestDao.insertRequest(request)
+                    }
+                }
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                mapSnapshotToHireRequest(snapshot, uid)?.let { request ->
+                    repositoryScope.launch {
+                        hireRequestDao.insertRequest(request)
+                    }
+                }
+            }
+
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+                val requestId = snapshot.child("id").getValue(String::class.java)
+                    ?: snapshot.key
+                    ?: return
+                repositoryScope.launch {
+                    hireRequestDao.deleteById(requestId)
+                }
+            }
+
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+
+            override fun onCancelled(error: DatabaseError) {
+                // Ignore cancelled sync.
+            }
+        }
+
+        requestsRef.addChildEventListener(hireRequestsListener!!)
+    }
+
+    private fun mapSnapshotToHireRequest(snapshot: DataSnapshot, workerId: String): HireRequestEntity? {
+        return try {
+            val id = snapshot.child("id").getValue(String::class.java)
+                ?: snapshot.key
+                ?: return null
+            val employerId = snapshot.child("employerId").getValue(String::class.java) ?: ""
+            val employerName = snapshot.child("employerName").getValue(String::class.java) ?: ""
+            val status = snapshot.child("status").getValue(String::class.java) ?: "PENDING"
+            val timestamp = snapshot.child("timestamp").getValue(Long::class.java) ?: 0L
+
+            HireRequestEntity(
+                id = id,
+                workerId = workerId,
+                employerId = employerId,
+                employerName = employerName,
+                status = status,
+                timestamp = timestamp
+            )
+        } catch (e: Exception) {
+            null
         }
     }
 }
