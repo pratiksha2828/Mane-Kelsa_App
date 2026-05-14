@@ -1,6 +1,7 @@
 package com.manekelsa.ui.screens
 
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +34,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.manekelsa.R
 import com.manekelsa.ui.components.glassmorphism
+import com.manekelsa.ui.components.DeleteAccountDialog
 import com.manekelsa.utils.LocalizationManager
 import com.manekelsa.utils.TranslationUtils
 import kotlinx.coroutines.launch
@@ -43,31 +45,28 @@ import java.util.UUID
 fun ResidentProfileScreen(
     displayName: String,
     phoneNumber: String,
+    onResidentProfileSaved: (String, String) -> Unit = { _, _ -> },
     onDeleteAccount: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val activity = context as? ComponentActivity
     val scope = rememberCoroutineScope()
     val auth = FirebaseAuth.getInstance()
     val database = FirebaseDatabase.getInstance()
     val viewModel: HomeViewModel = hiltViewModel()
     val accountDeletionViewModel: AccountDeletionViewModel = hiltViewModel()
+    val residentProfileViewModel: ResidentProfileViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    val uid = auth.currentUser?.uid ?: "default"
+    val uid = auth.currentUser?.uid?.takeIf { it.isNotBlank() } ?: "default"
     val sharedPref = context.getSharedPreferences("ResidentProfile_$uid", android.content.Context.MODE_PRIVATE)
     val savedName = sharedPref.getString("name", "") ?: ""
-    var localName by remember {
-        mutableStateOf(
-            if (savedName.isNotBlank()) {
-                savedName
-            } else {
-                uiState.userName?.takeIf { it.isNotBlank() } ?: displayName
-            }
-        )
+    var localName by remember(uid) {
+        mutableStateOf(savedName.takeIf { it.isNotBlank() } ?: displayName)
     }
-    var address by remember { mutableStateOf(sharedPref.getString("address", "") ?: "") }
-    var area by remember { mutableStateOf(sharedPref.getString("area", "") ?: "") }
-    var localPhone by remember { mutableStateOf(sharedPref.getString("phoneNumber", phoneNumber) ?: phoneNumber) }
+    var address by remember(uid) { mutableStateOf(sharedPref.getString("address", "") ?: "") }
+    var area by remember(uid) { mutableStateOf(sharedPref.getString("area", "") ?: "") }
+    var localPhone by remember(uid) { mutableStateOf(sharedPref.getString("phoneNumber", phoneNumber) ?: phoneNumber) }
     var isEditMode by remember { mutableStateOf(false) }
 
     Column(
@@ -78,12 +77,11 @@ fun ResidentProfileScreen(
             .padding(PaddingValues(16.dp)),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        LaunchedEffect(uiState.userName, displayName) {
-            if (savedName.isBlank() && localName.isBlank()) {
-                val resolved = uiState.userName?.takeIf { it.isNotBlank() } ?: displayName
-                if (resolved.isNotBlank()) {
-                    localName = resolved
-                }
+        LaunchedEffect(displayName, savedName) {
+            if (savedName.isBlank() && localName != displayName) {
+                localName = displayName.takeIf { it.isNotBlank() } ?: localName
+            } else if (localName.isBlank() && savedName.isNotBlank()) {
+                localName = savedName
             }
         }
 
@@ -134,9 +132,25 @@ fun ResidentProfileScreen(
         Button(
             onClick = {
                 if (isEditMode) {
-                    val id = auth.currentUser?.uid ?: UUID.randomUUID().toString()
+                    if (localName.isBlank()) {
+                        Toast.makeText(context, context.getString(R.string.enter_name_error), Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (area.isBlank() || address.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.resident_fill_area_address),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+                    val profileUserId = auth.currentUser?.uid?.takeIf { it.isNotBlank() }
+                        ?: sharedPref.getString("offline_resident_uuid", null)?.takeIf { it.isNotBlank() }
+                        ?: UUID.randomUUID().toString().also { gen ->
+                            sharedPref.edit().putString("offline_resident_uuid", gen).apply()
+                        }
                     val resident = mapOf(
-                        "id" to id,
+                        "id" to profileUserId,
                         "name" to localName,
                         "phoneNumber" to localPhone,
                         "area" to area,
@@ -144,28 +158,40 @@ fun ResidentProfileScreen(
                         "updatedAt" to System.currentTimeMillis()
                     )
                     scope.launch {
-                        // Save locally first to guarantee functionality even if Firebase is unconfigured
-                        sharedPref.edit()
+                        val localSaved = sharedPref.edit()
                             .putString("name", localName)
                             .putString("phoneNumber", localPhone)
                             .putString("area", area)
                             .putString("address", address)
-                            .apply()
-                            
+                            .commit()
+
+                        if (!localSaved) {
+                            Toast.makeText(context, "Local save failed", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+
                         try {
                             kotlinx.coroutines.withTimeoutOrNull(5000L) {
                                 val updateRequest = com.google.firebase.auth.UserProfileChangeRequest.Builder()
                                     .setDisplayName(localName)
                                     .build()
                                 auth.currentUser?.updateProfile(updateRequest)?.await()
-                                database.reference.child("residents").child(id).setValue(resident).await()
+                                database.reference.child("residents").child(profileUserId).setValue(resident).await()
                             }
-                        } catch(e: Exception) {
-                            // Firebase failed (likely rules or not enabled), but local save succeeded
+                        } catch (_: Exception) {
                         }
-                        
+
+                        auth.currentUser?.uid?.let { uid ->
+                            if (uid == profileUserId) {
+                                residentProfileViewModel.syncResidentToWorkerProfile(
+                                    uid, localName, localPhone, area, address
+                                )
+                            }
+                        }
+
                         Toast.makeText(context, context.getString(R.string.profile_saved), Toast.LENGTH_SHORT).show()
                         isEditMode = false
+                        onResidentProfileSaved(localName, localPhone)
                     }
                 } else {
                     isEditMode = true
@@ -175,7 +201,7 @@ fun ResidentProfileScreen(
                 .fillMaxWidth()
                 .height(52.dp),
             shape = RoundedCornerShape(12.dp),
-            enabled = if (isEditMode) area.isNotBlank() && address.isNotBlank() else true
+            enabled = true
         ) {
             Text(text = if (isEditMode) stringResource(R.string.save_profile) else stringResource(R.string.edit_profile))
         }
@@ -229,24 +255,52 @@ fun ResidentProfileScreen(
             val currentLanguage = LocalizationManager.getLanguage()
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                LanguageRadio(stringResource(R.string.lang_english), "en", currentLanguage) { LocalizationManager.setLanguage(it) }
-                LanguageRadio(stringResource(R.string.lang_kannada), "kn", currentLanguage) { LocalizationManager.setLanguage(it) }
+                LanguageRadio(stringResource(R.string.lang_english), "en", currentLanguage) {
+                    LocalizationManager.setLanguage(it)
+                    activity?.recreate()
+                }
+                LanguageRadio(stringResource(R.string.lang_kannada), "kn", currentLanguage) {
+                    LocalizationManager.setLanguage(it)
+                    activity?.recreate()
+                }
+            }
+
+            var isDeleting by remember { mutableStateOf(false) }
+            var showDeleteDialog by remember { mutableStateOf(false) }
+
+            if (showDeleteDialog) {
+                DeleteAccountDialog(
+                    onConfirm = {
+                        isDeleting = true
+                        accountDeletionViewModel.deleteAccount(
+                            context = context,
+                            onSuccess = {
+                                isDeleting = false
+                                showDeleteDialog = false
+                                Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
+                                onDeleteAccount()
+                            },
+                            onError = { message ->
+                                isDeleting = false
+                                showDeleteDialog = false
+                                Toast.makeText(context, "Delete Failed: $message", Toast.LENGTH_LONG).show()
+                            },
+                            onSignedOut = {
+                                isDeleting = false
+                                showDeleteDialog = false
+                                onDeleteAccount()
+                            }
+                        )
+                    },
+                    onDismiss = { showDeleteDialog = false },
+                    isDeleting = isDeleting
+                )
             }
 
             Button(
-                onClick = { 
-                    accountDeletionViewModel.deleteAccount(
-                        context = context,
-                        onSuccess = {
-                            Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
-                            onDeleteAccount()
-                        },
-                        onError = { message ->
-                            Toast.makeText(context, "Delete Failed: $message", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                },
+                onClick = { showDeleteDialog = true },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isDeleting,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error),
                 shape = RoundedCornerShape(12.dp)
             ) {

@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -89,10 +90,14 @@ fun HomeScreen(
 
         RoleModeCard(userRole = userRole, onChangeRole = onChangeRole)
 
-        if (uiState.isProfileComplete) {
+        if (userRole == UserRole.HIRER) {
             StatsRow(count = uiState.availableWorkersCount)
         } else {
-            CompleteProfileBanner(onClick = onNavigateToProfile)
+            StatsRow(count = uiState.availableWorkersCount)
+            if (!uiState.isProfileComplete) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CompleteProfileBanner(onClick = onNavigateToProfile)
+            }
         }
 
         if (userRole == UserRole.HIRER && uiState.featuredWorkers.isNotEmpty()) {
@@ -121,8 +126,8 @@ fun HomeScreen(
                 hasStarRated = ratedWorkers.contains(worker.id),
                 onDismiss = { selectedWorker = null },
                 onCall = { searchViewModel.onCallWorker(worker) },
-                onThumbsUp = { searchViewModel.onThumbsUp(worker.id) },
-                onStarRate = { rating -> searchViewModel.onStarRating(worker.id, rating) },
+                onThumbsUp = { searchViewModel.onThumbsUp(worker.id, searchUiState.hireRequests[worker.id]) },
+                onStarRate = { rating -> searchViewModel.onStarRating(worker.id, rating, searchUiState.hireRequests[worker.id]) },
                 onRequestHire = { searchViewModel.onRequestHire(worker.id) }
             )
         }
@@ -430,7 +435,9 @@ private fun StatsRow(count: Int) {
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -444,11 +451,14 @@ private fun StatsRow(count: Int) {
             }
             Text(
                 text = stringResource(R.string.available_workers_today),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
             )
             Text(
                 text = count.toString(),
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -530,7 +540,7 @@ private fun WorkerPreviewCard(worker: WorkerEntity, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             AsyncImage(
-                model = worker.photoUrl,
+                model = worker.photoUrl ?: "https://ui-avatars.com/api/?name=${worker.name.replace(" ", "+")}&background=random&size=200",
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()

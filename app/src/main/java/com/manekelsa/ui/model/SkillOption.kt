@@ -50,17 +50,17 @@ object SkillOption {
     fun normalize(skill: String): String {
         val trimmed = skill.trim()
         return when (trimmed) {
-            "Cleaner", "ಕ್ಲೀನರ್", "ಸ್ವಚ್ಛತೆ" -> CLEANER
-            "Cook", "ಅಡುಗೆಯವರು", "ಅಡುಗೆಗಾರ" -> COOK
-            "Gardener", "ಗಾರ್ಡನರ್", "ತೋಟಗಾರ" -> GARDENER
-            "Driver", "ಡ್ರೈವರ್" -> DRIVER
-            "Caretaker", "Caretaking", "ಪಾಲಕ" -> CARETAKER
-            "Plumber", "ಪ್ಲಂಬರ್" -> PLUMBER
-            "Electrician", "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಇಲೆಕ್ಟ್ರಿಷಿಯನ್" -> ELECTRICIAN
-            "Painter", "ಬಣ್ಣಗಾರ" -> PAINTER
-            "Carpenter", "ಕಾರ್ಪೆಂಟರ್" -> CARPENTER
-            "Babysitter", "ಮಕ್ಕಳ ಪಾಲಕ" -> BABYSITTER
-            "Nurse", "ನರ್ಸ್" -> NURSE
+            "Cleaner", "ಕ್ಲೀನರ್", "ಸ್ವಚ್ಛತೆ", "Cleaning", "House cleaning", "Housekeeping", "Maid" -> CLEANER
+            "Cook", "ಅಡುಗೆಯವರು", "ಅಡುಗೆಗಾರ", "Chef" -> COOK
+            "Gardener", "ಗಾರ್ಡನರ್", "ತೋಟಗಾರ", "Gardening", "Garden" -> GARDENER
+            "Driver", "ಡ್ರೈವರ್", "Driving" -> DRIVER
+            "Caretaker", "Caretaking", "ಪಾಲಕ", "Patient care", "Elder care" -> CARETAKER
+            "Plumber", "ಪ್ಲಂಬರ್", "Plumbing" -> PLUMBER
+            "Electrician", "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಇಲೆಕ್ಟ್ರಿಷಿಯನ್", "Electrical" -> ELECTRICIAN
+            "Painter", "ಬಣ್ಣಗಾರ", "Painting" -> PAINTER
+            "Carpenter", "ಕಾರ್ಪೆಂಟರ್", "Carpentry" -> CARPENTER
+            "Babysitter", "ಮಕ್ಕಳ ಪಾಲಕ", "Child care", "Childcare", "Nanny" -> BABYSITTER
+            "Nurse", "ನರ್ಸ್", "Nursing" -> NURSE
             else -> trimmed
         }
     }

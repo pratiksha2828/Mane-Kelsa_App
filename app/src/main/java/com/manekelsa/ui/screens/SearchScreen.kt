@@ -40,9 +40,12 @@ import org.osmdroid.views.overlay.Marker
 import android.content.Context
 import coil.compose.AsyncImage
 import com.manekelsa.ui.model.SkillOption
+import com.manekelsa.ui.components.SkillChipLabel
 import com.manekelsa.ui.components.glassmorphism
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import com.manekelsa.R
 import com.manekelsa.data.local.entity.WorkerEntity
@@ -63,6 +66,7 @@ fun SearchScreen(
     val likedWorkers by viewModel.likedWorkers.collectAsState()
     val ratedWorkers by viewModel.ratedWorkers.collectAsState()
     val context = LocalContext.current
+    val requestedToastText = stringResource(R.string.status_requested)
     val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -133,9 +137,54 @@ fun SearchScreen(
                         selectedCategory = uiState.selectedCategory,
                         onCategorySelected = { viewModel.onCategorySelect(it) }
                     )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.search_workers_summary,
+                                uiState.availableWorkersTotal,
+                                uiState.allWorkersTotal
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.maxDailyBudget?.toString().orEmpty(),
+                            onValueChange = { input ->
+                                val digits = input.filter { it.isDigit() }.take(6)
+                                viewModel.onMaxDailyBudgetChange(digits.toIntOrNull())
+                            },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            label = { Text(stringResource(R.string.search_max_daily_wage)) },
+                            placeholder = { Text(stringResource(R.string.search_max_price_hint)) },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        TextButton(onClick = { viewModel.onMaxDailyBudgetChange(null) }) {
+                            Text(stringResource(R.string.search_max_price_clear))
+                        }
+                    }
                 }
             }
-        }
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -161,7 +210,7 @@ fun SearchScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         item {
-                            MapPreviewCard(context = context, searchQuery = uiState.searchQuery)
+                            MapPreviewCard(context = context, mapQuery = uiState.mapQuery)
                         }
                         items(uiState.workers, key = { it.id }) { worker ->
                             WorkerResultCard(
@@ -170,8 +219,11 @@ fun SearchScreen(
                                 isThumbed = likedWorkers.contains(worker.id),
                                 onCall = { viewModel.onCallWorker(worker) },
                                 onCardClick = { selectedWorker = worker },
-                                onThumbsUp = { viewModel.onThumbsUp(worker.id) },
-                                onRequestHire = { viewModel.onRequestHire(worker.id) }
+                                onThumbsUp = { viewModel.onThumbsUp(worker.id, uiState.hireRequests[worker.id]) },
+                                onRequestHire = {
+                                    viewModel.onRequestHire(worker.id)
+                                    Toast.makeText(context, requestedToastText, Toast.LENGTH_SHORT).show()
+                                }
                             )
                         }
                     }
@@ -184,9 +236,12 @@ fun SearchScreen(
                             hasStarRated = ratedWorkers.contains(worker.id),
                             onDismiss = { selectedWorker = null },
                             onCall = { viewModel.onCallWorker(worker) },
-                            onThumbsUp = { viewModel.onThumbsUp(worker.id) },
-                            onStarRate = { rating -> viewModel.onStarRating(worker.id, rating) },
-                            onRequestHire = { viewModel.onRequestHire(worker.id) }
+                            onThumbsUp = { viewModel.onThumbsUp(worker.id, uiState.hireRequests[worker.id]) },
+                            onStarRate = { rating -> viewModel.onStarRating(worker.id, rating, uiState.hireRequests[worker.id]) },
+                            onRequestHire = {
+                                viewModel.onRequestHire(worker.id)
+                                Toast.makeText(context, requestedToastText, Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                 }
@@ -196,7 +251,7 @@ fun SearchScreen(
 }
 
 @Composable
-private fun MapPreviewCard(context: Context, searchQuery: String) {
+private fun MapPreviewCard(context: Context, mapQuery: String) {
     val mapView = remember {
         MapView(context).apply {
             Configuration.getInstance().userAgentValue = context.packageName
@@ -213,12 +268,12 @@ private fun MapPreviewCard(context: Context, searchQuery: String) {
         }
     }
 
-    androidx.compose.runtime.LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotBlank()) {
+    androidx.compose.runtime.LaunchedEffect(mapQuery) {
+        if (mapQuery.isNotBlank()) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                    val addresses = geocoder.getFromLocationName("$searchQuery, Bangalore", 1)
+                    val addresses = geocoder.getFromLocationName("$mapQuery, Bangalore", 1)
                     if (!addresses.isNullOrEmpty()) {
                         val location = addresses[0]
                         val geoPoint = GeoPoint(location.latitude, location.longitude)
@@ -228,7 +283,7 @@ private fun MapPreviewCard(context: Context, searchQuery: String) {
                             mapView.overlays.add(Marker(mapView).apply {
                                 position = geoPoint
                                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                title = searchQuery
+                                title = mapQuery
                             })
                             mapView.invalidate()
                         }
@@ -394,9 +449,8 @@ fun WorkerResultCard(
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(4.dp)
                             ) {
-                                Text(
-                                    text = TranslationUtils.getTranslatedSkill(skill),
-                                    style = MaterialTheme.typography.labelSmall,
+                                SkillChipLabel(
+                                    skill = skill,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -447,11 +501,11 @@ fun WorkerResultCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onThumbsUp, enabled = worker.isAvailable && !isThumbed) {
+                IconButton(onClick = onThumbsUp, enabled = hireStatus == "ACCEPTED" && !isThumbed) {
                     Icon(
                         Icons.Default.ThumbUp,
                         contentDescription = stringResource(R.string.rate_service),
-                        tint = if (worker.isAvailable && !isThumbed) MaterialTheme.colorScheme.primary else Color.Gray
+                        tint = if (hireStatus == "ACCEPTED" && !isThumbed) MaterialTheme.colorScheme.primary else Color.Gray
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -472,7 +526,7 @@ fun WorkerResultCard(
                 Button(
                     onClick = onRequestHire,
                     modifier = Modifier.height(40.dp),
-                    enabled = (worker.isAvailable || isSelf) && hireStatus == null,
+                    enabled = hireStatus == null || hireStatus == "REJECTED",
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         disabledContainerColor = Color.LightGray
@@ -482,7 +536,7 @@ fun WorkerResultCard(
                     val textStr = when (hireStatus) {
                         "PENDING" -> stringResource(R.string.status_requested)
                         "ACCEPTED" -> stringResource(R.string.status_hired)
-                        "REJECTED" -> stringResource(R.string.status_declined)
+                        "REJECTED" -> stringResource(R.string.action_request_hire)
                         else -> stringResource(R.string.action_request_hire)
                     }
                     Text(textStr, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
@@ -606,9 +660,8 @@ fun WorkerProfileBottomSheet(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = TranslationUtils.getTranslatedSkill(skill),
-                            style = MaterialTheme.typography.bodyMedium,
+                        SkillChipLabel(
+                            skill = skill,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
@@ -655,7 +708,7 @@ fun WorkerProfileBottomSheet(
                 val context = LocalContext.current
                 OutlinedButton(
                     onClick = onThumbsUp,
-                    enabled = !isThumbed,
+                    enabled = hireStatus == "ACCEPTED" && !isThumbed,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -731,7 +784,7 @@ fun WorkerProfileBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
-                enabled = (worker.isAvailable || isSelf) && hireStatus == null,
+                enabled = hireStatus == null || hireStatus == "REJECTED",
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     disabledContainerColor = Color.LightGray
@@ -741,7 +794,7 @@ fun WorkerProfileBottomSheet(
                 val textStr = when (hireStatus) {
                     "PENDING" -> stringResource(R.string.status_requested)
                     "ACCEPTED" -> stringResource(R.string.status_hired)
-                    "REJECTED" -> stringResource(R.string.status_declined)
+                    "REJECTED" -> stringResource(R.string.action_request_hire)
                     else -> stringResource(R.string.action_request_hire)
                 }
                 Text(textStr, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
@@ -749,7 +802,7 @@ fun WorkerProfileBottomSheet(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            if (worker.totalRatings > 0) {
+            if (worker.totalRatings > 0 && hireStatus == "ACCEPTED") {
                 // Reviews Section
                 Column(
                     modifier = Modifier.fillMaxWidth(),

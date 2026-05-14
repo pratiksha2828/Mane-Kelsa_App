@@ -21,7 +21,7 @@
     <string name="home_category_electrical">Electrical</string>
     <string name="home_category_cleaning">Cleaning</string>
     <string name="home_category_ac_service">AC Service</string>
-    <string name="available_workers_today">Available Workers Today: </string>
+    <string name="available_workers_today">Total Available Workers</string>
     <string name="complete_profile_title">Complete Your Profile</string>
     <string name="complete_profile_desc">Fill in your details to get discovered by employers.</string>
     <string name="featured_workers">Featured Workers</string>
@@ -92,6 +92,24 @@
     <string name="liked">Liked</string>
     <string name="submit">Submit</string>
     <string name="thanks_for_rating">Thanks for rating.</string>
+
+    <string name="search_workers_summary">%1$d available · %2$d total</string>
+    <string name="search_max_daily_wage">Max daily wage (₹)</string>
+    <string name="search_max_price_hint">No limit if empty</string>
+    <string name="search_max_price_clear">Clear</string>
+
+    <string name="worker_card_call_title">Call %1$s?</string>
+    <string name="worker_card_call_message">Open the phone dialer to call this worker?</string>
+    <string name="worker_card_call">Call</string>
+    <string name="worker_card_cancel">Cancel</string>
+    <string name="worker_card_rating_label">Rating</string>
+    <string name="worker_card_rate">Rate</string>
+    <string name="worker_card_rated">Rated</string>
+    <string name="worker_card_already_rated">Already rated today</string>
+    <string name="worker_card_rate_prompt">Did you like this worker\'s service?</string>
+    <string name="worker_card_thumbs_up">Thumbs up</string>
+    <string name="worker_card_not_now">Not now</string>
+    <string name="resident_fill_area_address">Please enter preferred area and address</string>
 
     <!-- Profile Screen -->
     <string name="profile_information">Profile Information</string>

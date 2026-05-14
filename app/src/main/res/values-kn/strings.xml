@@ -21,7 +21,7 @@
     <string name="home_category_electrical">ಇಲೆಕ್ಟ್ರಿಕಲ್</string>
     <string name="home_category_cleaning">ಸ್ವಚ್ಛತೆ</string>
     <string name="home_category_ac_service">ಎಸಿ ಸೇವೆ</string>
-    <string name="available_workers_today">ಇಂದು ಲಭ್ಯವಿರುವ ಕಾರ್ಮಿಕರು: </string>
+    <string name="available_workers_today">ಒಟ್ಟು ಲಭ್ಯವಿರುವ ಕಾರ್ಮಿಕರು: </string>
     <string name="complete_profile_title">ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ</string>
     <string name="complete_profile_desc">ಉದ್ಯೋಗದಾರರಿಗೆ ಕಂಡುಬರಲು ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ.</string>
     <string name="featured_workers">ವಿಶೇಷ ಕಾರ್ಮಿಕರು</string>
@@ -92,6 +92,24 @@
     <string name="liked">ಇಷ್ಟಪಟ್ಟಿದೆ</string>
     <string name="submit">ಸಲ್ಲಿಸು</string>
     <string name="thanks_for_rating">ಮೌಲ್ಯಮಾಪನಕ್ಕೆ ಧನ್ಯವಾದಗಳು.</string>
+
+    <string name="search_workers_summary">%1$d ಲಭ್ಯ · ಒಟ್ಟು %2$d</string>
+    <string name="search_max_daily_wage">ಗರಿಷ್ಠ ದೈನಂದಿನ ವೇತನ (₹)</string>
+    <string name="search_max_price_hint">ಖಾಲಿ ಇದ್ದರೆ ಮಿತಿಯಿಲ್ಲ</string>
+    <string name="search_max_price_clear">ಅಳಿಸಿ</string>
+
+    <string name="worker_card_call_title">%1$s ಅವರಿಗೆ ಕರೆ ಮಾಡುವುದೇ?</string>
+    <string name="worker_card_call_message">ಈ ಕಾರ್ಮಿಕರನ್ನು ಕರೆ ಮಾಡಲು ಡಯಲರ್ ತೆರೆಯಬೇಕೇ?</string>
+    <string name="worker_card_call">ಕರೆ</string>
+    <string name="worker_card_cancel">ರದ್ದು</string>
+    <string name="worker_card_rating_label">ಮೌಲ್ಯಮಾಪನ</string>
+    <string name="worker_card_rate">ಮೌಲ್ಯಮಾಪನ</string>
+    <string name="worker_card_rated">ಮೌಲ್ಯಮಾಪನ ಮಾಡಲಾಗಿದೆ</string>
+    <string name="worker_card_already_rated">ಇಂದು ಈಗಾಗಲೇ ಮೌಲ್ಯಮಾಪನ ಮಾಡಿದ್ದೀರಿ</string>
+    <string name="worker_card_rate_prompt">ಈ ಕಾರ್ಮಿಕರ ಸೇವೆ ನಿಮಗೆ ಇಷ್ಟವಾಯಿತೇ?</string>
+    <string name="worker_card_thumbs_up">ಇಷ್ಟ</string>
+    <string name="worker_card_not_now">ಈಗ ಬೇಡ</string>
+    <string name="resident_fill_area_address">ದಯವಿಟ್ಟು ಆಯ್ಕೆಯ ಪ್ರದೇಶ ಮತ್ತು ವಿಳಾಸವನ್ನು ಭರ್ತಿ ಮಾಡಿ</string>
 
     <!-- Profile Screen -->
     <string name="profile_information">ಪ್ರೊಫೈಲ್ ಮಾಹಿತಿ</string>

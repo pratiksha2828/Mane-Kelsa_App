@@ -29,6 +29,7 @@ import coil.compose.AsyncImage
 import com.manekelsa.R
 import com.manekelsa.ui.components.LargeButton
 import com.manekelsa.ui.components.WrapRow
+import com.manekelsa.ui.components.AvailabilityToggleCard
 import com.manekelsa.ui.model.SkillOption
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -247,6 +248,14 @@ fun WorkerProfileFormScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AvailabilityToggleCard(
+                    isAvailable = uiState.isAvailable,
+                    onAvailableChange = { isAvailable -> viewModel.updateUiState { it.copy(isAvailable = isAvailable) } },
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

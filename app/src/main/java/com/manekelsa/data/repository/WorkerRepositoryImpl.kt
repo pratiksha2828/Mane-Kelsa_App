@@ -31,6 +31,7 @@ class WorkerRepositoryImpl @Inject constructor(
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var availabilityListener: ValueEventListener? = null
+    private var hireRequestsListener: ChildEventListener? = null
 
 
     override suspend fun saveWorkerProfile(worker: WorkerEntity) {
@@ -78,7 +79,8 @@ class WorkerRepositoryImpl @Inject constructor(
 
             override fun onChildRemoved(snapshot: DataSnapshot) {
                 val id = snapshot.child("id").getValue(String::class.java)
-                if (id != null) {
+                    ?: snapshot.key
+                if (!id.isNullOrBlank()) {
                     repositoryScope.launch {
                         workerDao.getWorkerById(id)?.let { workerDao.deleteWorker(it) }
                     }
@@ -98,7 +100,8 @@ class WorkerRepositoryImpl @Inject constructor(
 
     private fun mapSnapshotToWorker(snapshot: DataSnapshot): WorkerEntity? {
         return try {
-            val id = snapshot.child("id").getValue(String::class.java) ?: ""
+            val id = snapshot.child("id").getValue(String::class.java)?.trim().orEmpty()
+                .ifBlank { snapshot.key?.trim().orEmpty() }
             val name = snapshot.child("name").getValue(String::class.java)
                 ?: snapshot.child("fullName").getValue(String::class.java).orEmpty()
             val photoUrl = snapshot.child("photoUrl").getValue(String::class.java)
@@ -121,7 +124,9 @@ class WorkerRepositoryImpl @Inject constructor(
             val likes = snapshot.child("likes").getValue(Int::class.java) ?: 0
             val lastUpdated = snapshot.child("lastUpdated").getValue(Long::class.java) ?: 0L
 
-            if (id.isNotBlank() && normalizedName != name) {
+            if (id.isBlank()) return null
+
+            if (normalizedName != name) {
                 repositoryScope.launch {
                     firebaseDatabase.reference
                         .child("workers")
@@ -131,7 +136,7 @@ class WorkerRepositoryImpl @Inject constructor(
                 }
             }
 
-            WorkerEntity(
+            val built = WorkerEntity(
                 id = id,
                 name = normalizedName,
                 photoUrl = photoUrl,
@@ -146,6 +151,8 @@ class WorkerRepositoryImpl @Inject constructor(
                 isAvailable = isAvailable,
                 lastUpdated = lastUpdated
             )
+            if (com.manekelsa.data.local.MockData.shouldHideWorker(built)) return null
+            built
         } catch (e: Exception) {
             null
         }
@@ -164,18 +171,63 @@ class WorkerRepositoryImpl @Inject constructor(
     override suspend fun updateAvailability(workerId: String, isAvailable: Boolean) {
         withContext(Dispatchers.IO) {
             val lastUpdated = System.currentTimeMillis()
-            workerDao.updateAvailability(workerId, isAvailable, lastUpdated)
-            
+            if (workerDao.getWorkerById(workerId) == null) {
+                val stub = minimalWorkerEntity(
+                    userId = workerId,
+                    name = auth.currentUser?.displayName?.trim().orEmpty(),
+                    phoneDigits = auth.currentUser?.phoneNumber?.filter { it.isDigit() }?.take(10).orEmpty(),
+                    area = "",
+                    isAvailable = isAvailable,
+                    lastUpdated = lastUpdated
+                )
+                workerDao.insertWorker(stub)
+                try {
+                    syncToFirebase(stub)
+                } catch (_: Exception) {
+                }
+            } else {
+                workerDao.updateAvailability(workerId, isAvailable, lastUpdated)
+            }
+
             val updates = mapOf(
                 "isAvailable" to isAvailable,
                 "lastUpdated" to lastUpdated
             )
-            firebaseDatabase.reference
-                .child("workers")
-                .child(workerId)
-                .updateChildren(updates)
-                .await()
+            try {
+                firebaseDatabase.reference
+                    .child("workers")
+                    .child(workerId)
+                    .updateChildren(updates)
+                    .await()
+            } catch (_: Exception) {
+            }
         }
+    }
+
+    private fun minimalWorkerEntity(
+        userId: String,
+        name: String,
+        phoneDigits: String,
+        area: String,
+        isAvailable: Boolean,
+        lastUpdated: Long
+    ): WorkerEntity {
+        val resolvedName = name.ifBlank { "Worker" }
+        return WorkerEntity(
+            id = userId,
+            name = resolvedName,
+            photoUrl = null,
+            skillsList = emptyList(),
+            dailyWage = 0.0,
+            area = area,
+            experience = 0,
+            phoneNumber = phoneDigits,
+            averageRating = 0f,
+            totalRatings = 0,
+            likes = 0,
+            isAvailable = isAvailable,
+            lastUpdated = lastUpdated
+        )
     }
 
     override fun getAvailability(workerId: String): Flow<Boolean?> {
@@ -191,9 +243,9 @@ class WorkerRepositoryImpl @Inject constructor(
 
         availabilityListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: return
+                val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: false
                 val lastUpdated = snapshot.child("lastUpdated").getValue(Long::class.java) ?: System.currentTimeMillis()
-                
+
                 repositoryScope.launch {
                     workerDao.updateAvailability(workerId, isAvailable, lastUpdated)
                 }
@@ -276,6 +328,21 @@ class WorkerRepositoryImpl @Inject constructor(
         )
         withContext(Dispatchers.IO) {
             hireRequestDao.insertRequest(request)
+            try {
+                firebaseDatabase.reference
+                    .child("hire_requests")
+                    .child(request.id)
+                    .setValue(
+                        mapOf(
+                            "workerId" to request.workerId,
+                            "employerId" to request.employerId,
+                            "employerName" to request.employerName,
+                            "status" to request.status,
+                            "timestamp" to request.timestamp
+                        )
+                    ).await()
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -294,6 +361,103 @@ class WorkerRepositoryImpl @Inject constructor(
     override suspend fun updateRequestStatus(requestId: String, status: String) {
         withContext(Dispatchers.IO) {
             hireRequestDao.updateRequestStatus(requestId, status)
+            try {
+                firebaseDatabase.reference
+                    .child("hire_requests")
+                    .child(requestId)
+                    .child("status")
+                    .setValue(status)
+                    .await()
+            } catch (_: Exception) {
+            }
         }
+    }
+
+    override fun startHireRequestsSync() {
+        if (hireRequestsListener != null) return
+        val ref = firebaseDatabase.reference.child("hire_requests")
+        val listener = object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                mapSnapshotToHireRequest(snapshot)?.let { req ->
+                    repositoryScope.launch { hireRequestDao.insertRequest(req) }
+                }
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                mapSnapshotToHireRequest(snapshot)?.let { req ->
+                    repositoryScope.launch { hireRequestDao.insertRequest(req) }
+                }
+            }
+
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+                val id = snapshot.key ?: return
+                repositoryScope.launch { hireRequestDao.deleteById(id) }
+            }
+
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        hireRequestsListener = listener
+        ref.addChildEventListener(listener)
+    }
+
+    override suspend fun mergeResidentContactIntoWorkerProfile(
+        userId: String,
+        name: String,
+        phone: String,
+        area: String,
+        address: String
+    ) {
+        withContext(Dispatchers.IO) {
+            val existing = workerDao.getWorkerById(userId)
+            val phoneDigits = phone.filter { it.isDigit() }.take(10)
+            val now = System.currentTimeMillis()
+            val base = existing ?: minimalWorkerEntity(
+                userId = userId,
+                name = name.trim().ifBlank { auth.currentUser?.displayName?.trim().orEmpty() },
+                phoneDigits = phoneDigits,
+                area = area.trim(),
+                isAvailable = false,
+                lastUpdated = now
+            )
+            val merged = base.copy(
+                name = name.trim().ifBlank { base.name },
+                phoneNumber = phoneDigits.ifBlank { base.phoneNumber },
+                area = area.trim().ifBlank { base.area },
+                lastUpdated = now
+            )
+            saveWorkerProfile(merged)
+            try {
+                firebaseDatabase.reference.child("residents").child(userId).setValue(
+                    mapOf(
+                        "id" to userId,
+                        "name" to name.trim(),
+                        "phoneNumber" to phone.filter { it.isDigit() }.take(10),
+                        "area" to area.trim(),
+                        "address" to address.trim(),
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                ).await()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun mapSnapshotToHireRequest(snapshot: DataSnapshot): com.manekelsa.data.local.entity.HireRequestEntity? {
+        val id = snapshot.key ?: return null
+        val workerId = snapshot.child("workerId").getValue(String::class.java) ?: return null
+        val employerId = snapshot.child("employerId").getValue(String::class.java) ?: return null
+        val employerName = snapshot.child("employerName").getValue(String::class.java).orEmpty()
+        val status = snapshot.child("status").getValue(String::class.java) ?: "PENDING"
+        val timestamp = snapshot.child("timestamp").getValue(Long::class.java) ?: System.currentTimeMillis()
+        return com.manekelsa.data.local.entity.HireRequestEntity(
+            id = id,
+            workerId = workerId,
+            employerId = employerId,
+            employerName = employerName,
+            status = status,
+            timestamp = timestamp
+        )
     }
 }

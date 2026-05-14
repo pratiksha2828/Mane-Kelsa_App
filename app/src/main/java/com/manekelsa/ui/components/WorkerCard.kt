@@ -24,7 +24,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.manekelsa.R
 import com.manekelsa.data.local.entity.WorkerEntity
+import com.manekelsa.ui.components.SkillChipLabel
+import com.manekelsa.utils.TranslationUtils
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,8 +48,8 @@ fun WorkerCard(
     if (showCallDialog) {
         AlertDialog(
             onDismissRequest = { showCallDialog = false },
-            title = { Text("Call ${worker.name}?") },
-            text = { Text("Do you want to open the dialer to call this worker?") },
+            title = { Text(stringResource(R.string.worker_card_call_title, worker.name)) },
+            text = { Text(stringResource(R.string.worker_card_call_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -56,12 +60,12 @@ fun WorkerCard(
                         context.startActivity(intent)
                     }
                 ) {
-                    Text("Call", color = saffronColor)
+                    Text(stringResource(R.string.worker_card_call), color = saffronColor)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCallDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text(stringResource(R.string.worker_card_cancel), color = Color.Gray)
                 }
             }
         )
@@ -82,7 +86,7 @@ fun WorkerCard(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Text(
-                    text = "Did you like this worker's service?",
+                    text = stringResource(R.string.worker_card_rate_prompt),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -101,7 +105,7 @@ fun WorkerCard(
                 ) {
                     Icon(Icons.Default.ThumbUp, contentDescription = null)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Thumbs Up 👍", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.worker_card_thumbs_up), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedButton(
@@ -111,7 +115,7 @@ fun WorkerCard(
                         .height(56.dp),
                     shape = MaterialTheme.shapes.large
                 ) {
-                    Text("Not Now", fontSize = 16.sp)
+                    Text(stringResource(R.string.worker_card_not_now), fontSize = 16.sp)
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -137,7 +141,7 @@ fun WorkerCard(
                 // Profile Photo
                 Box(modifier = Modifier.size(80.dp)) {
                     AsyncImage(
-                        model = worker.photoUrl,
+                        model = worker.photoUrl ?: "https://ui-avatars.com/api/?name=${worker.name.replace(" ", "+")}&background=random&size=200",
                         contentDescription = "Profile picture of ${worker.name}",
                         modifier = Modifier
                             .fillMaxSize()
@@ -162,7 +166,7 @@ fun WorkerCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = worker.name,
+                        text = TranslationUtils.getTranslatedName(worker.name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -179,9 +183,8 @@ fun WorkerCard(
                                 shape = RoundedCornerShape(4.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                             ) {
-                                Text(
-                                    text = skill,
-                                    style = MaterialTheme.typography.labelSmall,
+                                SkillChipLabel(
+                                    skill = skill,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -198,7 +201,7 @@ fun WorkerCard(
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = worker.area,
+                            text = TranslationUtils.getTranslatedArea(worker.area),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
                             maxLines = 1,
@@ -207,7 +210,7 @@ fun WorkerCard(
                     }
                     
                     Text(
-                        text = "₹${worker.dailyWage.toInt()}/day",
+                        text = "₹${worker.dailyWage.toInt()}${stringResource(R.string.per_day)}",
                         style = MaterialTheme.typography.titleSmall,
                         color = saffronColor,
                         fontWeight = FontWeight.Bold
@@ -244,7 +247,7 @@ fun WorkerCard(
             ) {
                 Column {
                     Text(
-                        text = "Rating",
+                        text = stringResource(R.string.worker_card_rating_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
@@ -260,7 +263,7 @@ fun WorkerCard(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
                     tooltip = {
                         if (hasRatedToday) {
-                            PlainTooltip { Text("Already rated today") }
+                            PlainTooltip { Text(stringResource(R.string.worker_card_already_rated)) }
                         }
                     },
                     state = rememberTooltipState()
@@ -283,7 +286,7 @@ fun WorkerCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (hasRatedToday) "Rated" else "Rate", 
+                            text = if (hasRatedToday) stringResource(R.string.worker_card_rated) else stringResource(R.string.worker_card_rate), 
                             fontWeight = FontWeight.Bold
                         )
                     }

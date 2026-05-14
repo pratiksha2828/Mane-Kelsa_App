@@ -166,7 +166,7 @@ fun MainScreen() {
                         SearchScreen(initialCategory = category)
                     }
                     composable(Screen.Requests.route) { com.manekelsa.ui.screens.RequestsScreen() }
-                    composable(Screen.Profile.route) { 
+                    composable(Screen.Profile.route) {
                         ProfileScreen(
                             displayName = displayName,
                             phoneNumber = phoneNumber,
@@ -175,12 +175,16 @@ fun MainScreen() {
                                 displayName = ""
                                 phoneNumber = ""
                             }
-                        ) 
+                        )
                     }
                     composable(Screen.ResidentProfile.route) {
                         ResidentProfileScreen(
                             displayName = displayName,
                             phoneNumber = phoneNumber,
+                            onResidentProfileSaved = { name, phone ->
+                                displayName = name
+                                phoneNumber = phone
+                            },
                             onDeleteAccount = {
                                 userRole = null
                                 displayName = ""

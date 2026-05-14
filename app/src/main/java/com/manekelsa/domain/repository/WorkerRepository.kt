@@ -21,4 +21,12 @@ interface WorkerRepository {
     fun getWorkerRequests(workerId: String): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>>
     fun getEmployerRequests(employerId: String): Flow<List<com.manekelsa.data.local.entity.HireRequestEntity>>
     suspend fun updateRequestStatus(requestId: String, status: String)
+    fun startHireRequestsSync()
+    suspend fun mergeResidentContactIntoWorkerProfile(
+        userId: String,
+        name: String,
+        phone: String,
+        area: String,
+        address: String
+    )
 }

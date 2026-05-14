@@ -32,8 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import com.manekelsa.R
 import com.manekelsa.ui.components.WrapRow
+import com.manekelsa.ui.components.DeleteAccountDialog
 import com.manekelsa.ui.model.SkillOption
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,9 +127,7 @@ fun ProfileScreen(
             // SECTION 2: WORK DETAILS
             WorkDetailsSection(uiState, viewModel)
 
-            // SECTION 3: (Removed Availability)
-
-            // SECTION 4: SETTINGS
+            // SECTION 3: SETTINGS
             SettingsSection(uiState, viewModel, accountDeletionViewModel, onDeleteAccount)
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -312,41 +312,6 @@ fun WorkDetailsSection(uiState: WorkerProfileUiState, viewModel: WorkerProfileVi
 }
 
 @Composable
-fun AvailabilitySection(uiState: WorkerProfileUiState, onToggle: (Boolean) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(stringResource(R.string.available_today), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-                    Text(stringResource(R.string.last_active, uiState.lastActive), style = MaterialTheme.typography.bodySmall)
-                }
-                Switch(
-                    checked = uiState.isAvailable,
-                    onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF4CAF50)
-                    )
-                )
-            }
-            Text(
-                stringResource(R.string.availability_reset_info),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
 fun SettingsSection(
     uiState: WorkerProfileUiState,
     viewModel: WorkerProfileViewModel,
@@ -357,43 +322,60 @@ fun SettingsSection(
         Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
         
         Text(stringResource(R.string.language_switcher), style = MaterialTheme.typography.titleSmall)
+        val context = LocalContext.current
+        val activity = context as? ComponentActivity
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            LanguageRadio(stringResource(R.string.lang_english), "en", uiState.currentLanguage) { viewModel.setLanguage(it) }
-            LanguageRadio(stringResource(R.string.lang_kannada), "kn", uiState.currentLanguage) { viewModel.setLanguage(it) }
+            LanguageRadio(stringResource(R.string.lang_english), "en", uiState.currentLanguage) {
+                viewModel.setLanguage(it)
+                activity?.recreate()
+            }
+            LanguageRadio(stringResource(R.string.lang_kannada), "kn", uiState.currentLanguage) {
+                viewModel.setLanguage(it)
+                activity?.recreate()
+            }
         }
 
-        val context = LocalContext.current
         var isDeleting by remember { mutableStateOf(false) }
+        var showDeleteDialog by remember { mutableStateOf(false) }
+
+        if (showDeleteDialog) {
+            DeleteAccountDialog(
+                onConfirm = {
+                    isDeleting = true
+                    accountDeletionViewModel.deleteAccount(
+                        context = context,
+                        onSuccess = {
+                            isDeleting = false
+                            showDeleteDialog = false
+                            onDeleteAccount()
+                        },
+                        onError = { message ->
+                            isDeleting = false
+                            showDeleteDialog = false
+                            Toast.makeText(context, "Delete Failed: $message", Toast.LENGTH_LONG).show()
+                        },
+                        onSignedOut = {
+                            isDeleting = false
+                            showDeleteDialog = false
+                            onDeleteAccount()
+                        }
+                    )
+                },
+                onDismiss = { showDeleteDialog = false },
+                isDeleting = isDeleting
+            )
+        }
+
         Button(
-            onClick = {
-                if (isDeleting) return@Button
-                isDeleting = true
-                accountDeletionViewModel.deleteAccount(
-                    context = context,
-                    onSuccess = {
-                        isDeleting = false
-                        onDeleteAccount()
-                    },
-                    onError = { message ->
-                        isDeleting = false
-                        Toast.makeText(context, "Delete Failed: $message", Toast.LENGTH_SHORT).show()
-                    }
-                )
-            },
+            onClick = { showDeleteDialog = true },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isDeleting,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error),
             shape = RoundedCornerShape(12.dp)
         ) {
-            if (isDeleting) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Deleting...")
-            } else {
-                Icon(Icons.Default.DeleteForever, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Account")
-            }
+            Icon(Icons.Default.DeleteForever, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Delete Account")
         }
     }
 }

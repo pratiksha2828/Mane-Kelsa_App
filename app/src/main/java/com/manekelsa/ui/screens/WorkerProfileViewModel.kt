@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.manekelsa.data.local.entity.WorkerEntity
 import com.manekelsa.data.account.AccountDeletionManager
@@ -16,8 +17,13 @@ import com.manekelsa.domain.repository.WorkerRepository
 import com.manekelsa.utils.LocalizationManager
 import com.manekelsa.ui.model.SkillOption
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -49,8 +55,10 @@ data class WorkerProfileUiState(
 
 @HiltViewModel
 class WorkerProfileViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val auth: FirebaseAuth,
     private val storage: FirebaseStorage,
+    private val database: FirebaseDatabase,
     private val repository: WorkerRepository,
     private val callLogRepository: CallLogRepository,
     private val accountDeletionManager: AccountDeletionManager
@@ -71,11 +79,32 @@ class WorkerProfileViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
-                // Try local first
+                val prefs = appContext.getSharedPreferences("ResidentProfile_$userId", Context.MODE_PRIVATE)
+                val prefName = prefs.getString("name", "").orEmpty().trim()
+                val prefPhone = prefs.getString("phoneNumber", "").orEmpty().trim()
+                val prefArea = prefs.getString("area", "").orEmpty().trim()
+                val prefAddress = prefs.getString("address", "").orEmpty().trim()
+
                 var worker = repository.getWorkerProfile(userId)
-                
+                if (worker == null && (prefName.isNotEmpty() || prefPhone.isNotEmpty() || prefArea.isNotEmpty())) {
+                    repository.mergeResidentContactIntoWorkerProfile(
+                        userId,
+                        prefName,
+                        prefPhone,
+                        prefArea,
+                        prefAddress
+                    )
+                    worker = repository.getWorkerProfile(userId)
+                }
                 if (worker != null) {
                     updateStateWithWorker(worker)
+                }
+                _uiState.update { st ->
+                    st.copy(
+                        fullName = st.fullName.ifBlank { prefName },
+                        phoneNumber = st.phoneNumber.ifBlank { prefPhone },
+                        areaStreet = st.areaStreet.ifBlank { prefArea }
+                    )
                 }
             } catch (e: Exception) {
             } finally {
@@ -120,24 +149,11 @@ class WorkerProfileViewModel @Inject constructor(
     }
 
     fun setInitialContactInfo(name: String, phone: String) {
-        if (_uiState.value.fullName.isEmpty() && name.isNotEmpty()) {
-            _uiState.update { it.copy(fullName = name) }
-        }
-        if (_uiState.value.phoneNumber.isEmpty() && phone.isNotEmpty()) {
-            _uiState.update { it.copy(phoneNumber = phone) }
-        }
-    }
-
-    fun toggleAvailability(isAvailable: Boolean) {
-        val userId = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            try {
-                repository.updateAvailability(userId, isAvailable)
-                _uiState.update { it.copy(
-                    isAvailable = isAvailable,
-                    lastActive = formatTimestamp(System.currentTimeMillis())
-                ) }
-            } catch (e: Exception) {}
+        _uiState.update { st ->
+            st.copy(
+                fullName = name.takeIf { it.isNotBlank() } ?: st.fullName,
+                phoneNumber = phone.takeIf { it.isNotBlank() } ?: st.phoneNumber
+            )
         }
     }
 
@@ -214,6 +230,26 @@ class WorkerProfileViewModel @Inject constructor(
                         syncError = e.message
                     }
                 }
+                withContext(Dispatchers.IO) {
+                    try {
+                        context.getSharedPreferences("ResidentProfile_$userId", Context.MODE_PRIVATE).edit()
+                            .putString("name", currentState.fullName)
+                            .putString("phoneNumber", currentState.phoneNumber)
+                            .putString("area", currentState.areaStreet)
+                            .apply()
+                        database.reference.child("residents").child(userId).setValue(
+                            mapOf(
+                                "id" to userId,
+                                "name" to currentState.fullName,
+                                "phoneNumber" to currentState.phoneNumber,
+                                "area" to currentState.areaStreet,
+                                "address" to "",
+                                "updatedAt" to System.currentTimeMillis()
+                            )
+                        ).await()
+                    } catch (_: Exception) {
+                    }
+                }
                 _uiState.update { it.copy(
                     message = if (syncError == null) {
                         "Profile Updated Successfully"
@@ -249,24 +285,54 @@ class WorkerProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val result = accountDeletionManager.deleteAccount(context)
-                if (result.isFailure) {
-                    throw result.exceptionOrNull() ?: Exception("Delete failed")
-                }
-                _uiState.update { it.copy(message = "Account deleted successfully", isEditMode = false) }
-                withContext(Dispatchers.Main) {
-                    onSuccess()
+                if (result.isSuccess) {
+                    _uiState.update { it.copy(message = "Account deleted successfully", isEditMode = false) }
+                    withContext(Dispatchers.Main) {
+                        onSuccess()
+                    }
+                } else {
+                    val signedOut = auth.currentUser == null
+                    if (signedOut) {
+                        withContext(Dispatchers.Main) {
+                            onSuccess()
+                        }
+                    } else {
+                        val ex = result.exceptionOrNull()
+                        val errorMessage = if (ex.isRecentLoginRequired()) {
+                            "Please sign in again to delete your account"
+                        } else {
+                            "Delete Failed: ${ex?.message}"
+                        }
+                        _uiState.update { it.copy(message = errorMessage) }
+                    }
                 }
             } catch (e: Exception) {
-                val errorMessage = if (e is FirebaseAuthRecentLoginRequiredException) {
-                    "Please sign in again to delete your account"
+                val signedOut = auth.currentUser == null
+                if (signedOut) {
+                    withContext(Dispatchers.Main) {
+                        onSuccess()
+                    }
                 } else {
-                    "Delete Failed: ${e.message}"
+                    val errorMessage = if (e.isRecentLoginRequired()) {
+                        "Please sign in again to delete your account"
+                    } else {
+                        "Delete Failed: ${e.message}"
+                    }
+                    _uiState.update { it.copy(message = errorMessage) }
                 }
-                _uiState.update { it.copy(message = errorMessage) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    private fun Throwable?.isRecentLoginRequired(): Boolean {
+        var t: Throwable? = this
+        while (t != null) {
+            if (t is FirebaseAuthRecentLoginRequiredException) return true
+            t = t.cause
+        }
+        return false
     }
 
     fun clearMessage() {

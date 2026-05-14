@@ -71,7 +71,7 @@ fun ProfilePreviewScreen(
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    val imageSource = uiState.localPhotoUri ?: uiState.profilePhotoUrl
+                    val imageSource = uiState.localPhotoUri ?: uiState.profilePhotoUrl ?: "https://ui-avatars.com/api/?name=${uiState.fullName.replace(" ", "+")}&background=random&size=200"
                     if (imageSource != null) {
                         AsyncImage(
                             model = imageSource,

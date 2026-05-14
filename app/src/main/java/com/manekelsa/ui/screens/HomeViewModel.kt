@@ -3,6 +3,7 @@ package com.manekelsa.ui.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.manekelsa.data.local.MockData
 import com.manekelsa.data.local.entity.CallLogEntity
 import com.manekelsa.data.local.entity.WorkerEntity
 import com.manekelsa.domain.repository.CallLogRepository
@@ -13,8 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -63,6 +64,7 @@ class HomeViewModel @Inject constructor(
         val uid = currentUser?.uid
 
         viewModelScope.launch {
+            workerRepository.startHireRequestsSync()
             if (uid != null) {
                 val profile = workerRepository.getWorkerProfile(uid)
                 _uiState.value = _uiState.value.copy(
@@ -78,7 +80,9 @@ class HomeViewModel @Inject constructor(
             }
 
             launch {
-                workerRepository.getAllWorkers().collectLatest { workers ->
+                val workersFlow = workerRepository.getAllWorkers()
+                workersFlow.collectLatest { workers ->
+                    val currentUid = uid.orEmpty()
                     val sanitizedWorkers = workers.map { worker ->
                         val normalizedName = WorkerNameNormalizer.normalize(worker.name, worker.id, worker.phoneNumber)
                         if (normalizedName != worker.name) {
@@ -89,11 +93,13 @@ class HomeViewModel @Inject constructor(
                         worker.copy(name = normalizedName)
                     }
 
-                    val data = (sanitizedWorkers + fallbackWorkers).distinctBy { it.id }
-                    val available = data.filter { it.isAvailable }
+                    val merged = (sanitizedWorkers + fallbackWorkers).distinctBy { it.id }
+                    val discoveryWorkers = merged.filter { it.id == currentUid || !MockData.shouldHideWorker(it) }
+                    val countWorkers = merged.filter { it.id == currentUid || !MockData.shouldHideWorker(it) }
+                    val availableAll = countWorkers.filter { it.isAvailable }
                     _uiState.value = _uiState.value.copy(
-                        availableWorkersCount = available.size,
-                        featuredWorkers = available.take(3),
+                        availableWorkersCount = availableAll.size,
+                        featuredWorkers = discoveryWorkers.filter { it.isAvailable }.take(3),
                         isLoading = false
                     )
                 }

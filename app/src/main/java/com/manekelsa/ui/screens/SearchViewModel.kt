@@ -11,14 +11,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.manekelsa.utils.TranslationUtils
+import com.manekelsa.ui.model.SkillOption
 
 data class SearchUiState(
     val searchQuery: String = "",
     val selectedCategory: String = "All",
+    val maxDailyBudget: Int? = null,
     val workers: List<WorkerEntity> = emptyList(),
     val contactedWorkerIds: Set<String> = emptySet(),
     val hireRequests: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
+    val availableWorkersTotal: Int = 0,
+    val allWorkersTotal: Int = 0,
+    val mapQuery: String = "",
     val error: String? = null
 )
 
@@ -37,6 +43,7 @@ class SearchViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("All")
+    private val _maxDailyBudget = MutableStateFlow<Int?>(null)
     private val _error = MutableStateFlow<String?>(null)
 
     private val fallbackWorkers: List<WorkerEntity> = com.manekelsa.data.local.MockData.fallbackWorkers
@@ -69,13 +76,23 @@ class SearchViewModel @Inject constructor(
     private val _baseUiState = combine(
         _searchQuery,
         _selectedCategory,
+        _maxDailyBudget,
         _contactedWorkerIds,
         _hireRequests,
         _error
-    ) { query, category, contactedIds, requests, error ->
+    ) { params ->
+        val query = params[0] as String
+        val category = params[1] as String
+        val budget = params[2] as Int?
+        @Suppress("UNCHECKED_CAST")
+        val contactedIds = params[3] as Set<String>
+        @Suppress("UNCHECKED_CAST")
+        val requests = params[4] as Map<String, String>
+        val error = params[5] as String?
         SearchUiState(
             searchQuery = query,
             selectedCategory = category,
+            maxDailyBudget = budget,
             contactedWorkerIds = contactedIds,
             hireRequests = requests,
             isLoading = false,
@@ -88,9 +105,14 @@ class SearchViewModel @Inject constructor(
         // Debounce only the search query for filtering, but emit the immediate query in the state
         _allWorkers.map { allWorkers ->
             val data = (allWorkers + fallbackWorkers).distinctBy { it.id }
+            val filtered = filterWorkers(data, state.searchQuery, state.selectedCategory, state.maxDailyBudget, localEmployerId)
+            val others = data.filter { w -> localEmployerId == "local_employer" || w.id != localEmployerId }
             state.copy(
-                workers = filterWorkers(data, state.searchQuery, state.selectedCategory),
-                isLoading = data.isEmpty() && state.error == null
+                workers = filtered,
+                isLoading = data.isEmpty() && state.error == null,
+                availableWorkersTotal = others.count { it.isAvailable },
+                allWorkersTotal = others.size,
+                mapQuery = resolveMapQuery(state.searchQuery)
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SearchUiState(isLoading = true))
@@ -119,36 +141,40 @@ class SearchViewModel @Inject constructor(
     private fun filterWorkers(
         workers: List<WorkerEntity>,
         searchText: String,
-        selectedSkill: String
+        selectedSkill: String,
+        maxDailyBudget: Int?,
+        excludeUserId: String?
     ): List<WorkerEntity> {
-        val normalizedQuery = SearchMatcher.normalizeQuery(searchText)
-        val skillFiltered = workers.filter { worker ->
-            SearchMatcher.matchesSkill(worker, selectedSkill)
+        var pool = workers
+        val budgetCap = maxDailyBudget?.takeIf { it > 0 }
+        if (budgetCap != null) {
+            pool = pool.filter { it.dailyWage <= budgetCap }
+        }
+
+        val normalizedQuery = SearchMatcher.normalizeQuery(
+            TranslationUtils.normalizeSearchText(searchText)
+        )
+
+        val extractedSkills = TranslationUtils.extractSkillIds(searchText)
+
+        var skillFiltered = pool.filter { worker ->
+            if (selectedSkill.isNotBlank() && selectedSkill != SkillOption.ALL) {
+                SearchMatcher.matchesSkill(worker, selectedSkill)
+            } else if (extractedSkills.isNotEmpty()) {
+                worker.skillsList.any { skill ->
+                    extractedSkills.contains(SkillOption.normalize(skill))
+                }
+            } else {
+                true
+            }
         }
 
         if (normalizedQuery.isBlank()) {
             return sortWorkers(skillFiltered)
         }
 
-        val exactMatches = skillFiltered.filter { worker ->
-            SearchMatcher.matchesQuery(worker, normalizedQuery)
-        }
-
-        val results = if (exactMatches.isNotEmpty()) {
-            sortWorkers(exactMatches)
-        } else {
-            skillFiltered
-                .map { worker -> worker to SearchMatcher.similarityScore(worker, normalizedQuery) }
-                .sortedWith(
-                    compareBy<Pair<WorkerEntity, Int>> { it.second }
-                        .thenByDescending { it.first.isAvailable }
-                        .thenByDescending { it.first.averageRating }
-                )
-                .take(5)
-                .map { it.first }
-        }
-
-        return results
+        val exactMatches = skillFiltered.filter { worker -> SearchMatcher.matchesQuery(worker, normalizedQuery) }
+        return sortWorkers(exactMatches)
     }
 
     private fun sortWorkers(workers: List<WorkerEntity>): List<WorkerEntity> {
@@ -156,6 +182,10 @@ class SearchViewModel @Inject constructor(
             compareByDescending<WorkerEntity> { it.isAvailable }
                 .thenByDescending { it.averageRating }
         )
+    }
+
+    fun onMaxDailyBudgetChange(maxRupees: Int?) {
+        _maxDailyBudget.value = maxRupees?.takeIf { it > 0 }
     }
 
     fun onSearchQueryChange(query: String) {
@@ -172,7 +202,8 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun onThumbsUp(workerId: String) {
+    fun onThumbsUp(workerId: String, hireStatus: String?) {
+        if (hireStatus != "ACCEPTED") return
         viewModelScope.launch {
             if (!_likedWorkers.value.contains(workerId)) {
                 workerRepository.rateWorker(workerId)
@@ -181,7 +212,8 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun onStarRating(workerId: String, rating: Int) {
+    fun onStarRating(workerId: String, rating: Int, hireStatus: String?) {
+        if (hireStatus != "ACCEPTED") return
         viewModelScope.launch {
             val result = ratingRepository.updateRating(workerId, rating.toFloat())
             if (result.isSuccess) {
@@ -198,5 +230,41 @@ class SearchViewModel @Inject constructor(
 
     fun retry() {
         _error.value = null
+    }
+
+    fun resolveMapQuery(query: String): String {
+        val normalized = TranslationUtils.normalizeSearchText(query)
+        if (normalized.isBlank()) return ""
+
+        val placeHints = listOf(
+            ",",
+            "whitefield", "ವೈಟ್‌ಫೀಲ್ಡ್",
+            "koramangala", "ಕೋರಮಂಗಲ",
+            "indiranagar", "ಇಂದಿರಾನಗರ",
+            "jayanagar", "ಜಯನಗರ",
+            "malleshwaram", "ಮಲ್ಲೇಶ್ವರಂ",
+            "rajajinagar", "ರಾಜಾಜಿನಗರ",
+            "electronic city", "ಎಲೆಕ್ಟ್ರಾನಿಕ್ ಸಿಟಿ",
+            "vijayanagar", "ವಿಜಯನಗರ",
+            "hsr", "ಎಚ್‌ಎಸ್‌ಆರ್",
+            "btm", "ಬಿಟಿಎಂ",
+            "layout", "ಲೇಔಟ್",
+            "nagar", "ನಗರ",
+            "road", "ರಸ್ತೆ",
+            "street",
+            "st",
+            "cross", "ಕ್ರಾಸ್",
+            "main", "ಮುಖ್ಯ",
+            "colony", "ವಸತಿ",
+            "phase", "ಹಂತ",
+            "block", "ಬ್ಲಾಕ್",
+            "sector", "ವಲಯ",
+            "circle",
+            "market",
+            "city",
+            "ಬೆಂಗಳೂರು", "bangalore", "bengaluru"
+        )
+        val looksLikePlace = placeHints.any { hint -> normalized.contains(hint) }
+        return if (looksLikePlace) normalized else ""
     }
 }
