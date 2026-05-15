@@ -180,7 +180,8 @@ fun ProfilePreviewScreen(
                             .weight(1.5f)
                             .height(56.dp),
                         shape = MaterialTheme.shapes.medium,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9933))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9933)),
+                        enabled = !uiState.isLoading
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))

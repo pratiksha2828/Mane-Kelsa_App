@@ -160,6 +160,7 @@
     <string name="add_skill_label">ಹೊಸ ಕೌಶಲ್ಯ ಸೇರಿಸಿ</string>
     <string name="add_skill_button">ಕೌಶಲ್ಯ ಸೇರಿಸಿ</string>
     <string name="rate_per_hour">ಗಂಟೆಗೆ ದರ</string>
+    <string name="rate_per_day">ದಿನದ ವೇತನ</string>
     <string name="resident_profile">ನಿವಾಸಿ ಪ್ರೊಫೈಲ್</string>
     <string name="preferred_area">ಆದ್ಯತೆಯ ಪ್ರದೇಶ</string>
     <string name="address_label">ವಿಳಾಸ</string>

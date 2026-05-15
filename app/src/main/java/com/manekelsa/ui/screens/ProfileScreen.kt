@@ -91,7 +91,8 @@ fun ProfileScreen(
                         .padding(16.dp)
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = if (uiState.isEditMode) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !uiState.isLoading
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))

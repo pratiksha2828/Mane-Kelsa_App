@@ -312,7 +312,23 @@ class WorkerRepositoryImpl @Inject constructor(
             firebaseDatabase.reference
                 .child("workers")
                 .child(worker.id)
-                .setValue(worker)
+                .setValue(
+                    mapOf(
+                        "id" to worker.id,
+                        "name" to worker.name,
+                        "photoUrl" to worker.photoUrl,
+                        "skillsList" to worker.skillsList,
+                        "dailyWage" to worker.dailyWage,
+                        "area" to worker.area,
+                        "experience" to worker.experience,
+                        "phoneNumber" to worker.phoneNumber,
+                        "averageRating" to worker.averageRating,
+                        "totalRatings" to worker.totalRatings,
+                        "likes" to worker.likes,
+                        "isAvailable" to worker.isAvailable,
+                        "lastUpdated" to worker.lastUpdated
+                    )
+                )
                 .await()
         }
     }

@@ -3,6 +3,7 @@ package com.manekelsa.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -82,7 +83,6 @@ fun SearchScreen(
         containerColor = Color.Transparent,
         topBar = {
             Surface(shadowElevation = 4.dp) {
-                var showPriceFilters by remember { mutableStateOf(false) }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -132,77 +132,6 @@ fun SearchScreen(
                             unfocusedBorderColor = Color.LightGray
                         )
                     )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { showPriceFilters = !showPriceFilters },
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Icon(Icons.Default.FilterAlt, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.filter_price_button))
-                        }
-
-                        FilterChip(
-                            selected = uiState.sortByPriceAsc != null,
-                            onClick = { viewModel.togglePriceSort() },
-                            label = { Text(stringResource(R.string.filter_sort_price)) },
-                            leadingIcon = {
-                                if (uiState.sortByPriceAsc != null) {
-                                    Icon(
-                                        imageVector = if (uiState.sortByPriceAsc == true) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        )
-                    }
-
-                    if (showPriceFilters) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = uiState.minPrice,
-                                onValueChange = { viewModel.onMinPriceChange(it) },
-                                modifier = Modifier.weight(1f),
-                                label = { Text(stringResource(R.string.filter_min_price)) },
-                                leadingIcon = { Icon(Icons.Default.CurrencyRupee, contentDescription = null) },
-                                singleLine = true,
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                ),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color(0xFFFF9933),
-                                    unfocusedBorderColor = Color.LightGray
-                                )
-                            )
-                            OutlinedTextField(
-                                value = uiState.maxPrice,
-                                onValueChange = { viewModel.onMaxPriceChange(it) },
-                                modifier = Modifier.weight(1f),
-                                label = { Text(stringResource(R.string.filter_max_price)) },
-                                leadingIcon = { Icon(Icons.Default.CurrencyRupee, contentDescription = null) },
-                                singleLine = true,
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                ),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color(0xFFFF9933),
-                                    unfocusedBorderColor = Color.LightGray
-                                )
-                            )
-                        }
-                    }
 
                     // 2. Filter Chips Row
                     CategoryChipsRow(
@@ -265,7 +194,7 @@ fun SearchScreen(
         ) {
             val availableCount = uiState.workers.count { it.isAvailable }
             Text(
-                text = stringResource(R.string.available_workers_count, availableCount),
+                text = "${stringResource(R.string.available_workers_today)}: $availableCount",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -329,6 +258,7 @@ fun SearchScreen(
             }
         }
     }
+}
 }
 
 @Composable
@@ -522,10 +452,12 @@ fun WorkerResultCard(
 
                     // Skills
                     Row(
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier
+                            .padding(vertical = 4.dp)
+                            .horizontalScroll(androidx.compose.foundation.rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        worker.skillsList.take(3).forEach { skill ->
+                        worker.skillsList.forEach { skill ->
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(4.dp)
@@ -735,7 +667,10 @@ fun WorkerProfileBottomSheet(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 worker.skillsList.forEach { skill ->
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,

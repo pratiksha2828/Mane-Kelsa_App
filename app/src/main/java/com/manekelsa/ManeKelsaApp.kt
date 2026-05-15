@@ -292,7 +292,23 @@ class ManeKelsaApp : Application(), Configuration.Provider {
             )
 
             samples.forEach { worker ->
-                workersRef.child(worker.id).setValue(worker)
+                workersRef.child(worker.id).setValue(
+                    mapOf(
+                        "id" to worker.id,
+                        "name" to worker.name,
+                        "photoUrl" to worker.photoUrl,
+                        "skillsList" to worker.skillsList,
+                        "dailyWage" to worker.dailyWage,
+                        "area" to worker.area,
+                        "experience" to worker.experience,
+                        "phoneNumber" to worker.phoneNumber,
+                        "averageRating" to worker.averageRating,
+                        "totalRatings" to worker.totalRatings,
+                        "likes" to worker.likes,
+                        "isAvailable" to worker.isAvailable,
+                        "lastUpdated" to worker.lastUpdated
+                    )
+                )
             }
         }
     }

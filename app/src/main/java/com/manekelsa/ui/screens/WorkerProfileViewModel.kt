@@ -203,18 +203,43 @@ class WorkerProfileViewModel @Inject constructor(
                 var syncError: String? = null
                 if (currentState.localPhotoUri != null) {
                     try {
-                        kotlinx.coroutines.withTimeout(10000L) {
-                            val compressedImage = compressImage(context, currentState.localPhotoUri)
-                            if (compressedImage != null) {
+                        val compressedImage = compressImage(context, currentState.localPhotoUri)
+                        if (compressedImage != null) {
+                            // 1. Save locally to internal storage
+                            val dir = java.io.File(context.filesDir, "profile_pics")
+                            if (!dir.exists()) dir.mkdirs()
+                            val localFile = java.io.File(dir, "worker_$userId.jpg")
+                            java.io.FileOutputStream(localFile).use { it.write(compressedImage) }
+                            
+                            downloadUrl = "file://" + localFile.absolutePath
+                            workerEntity = workerEntity.copy(photoUrl = downloadUrl, lastUpdated = System.currentTimeMillis())
+                            repository.saveWorkerProfile(workerEntity)
+
+                            // 2. Try to sync to Firebase Storage
+                            kotlinx.coroutines.withTimeout(15000L) {
                                 val storageRef = storage.reference.child("worker_profiles/$userId.jpg")
-                                storageRef.putBytes(compressedImage).await()
-                                downloadUrl = storageRef.downloadUrl.await().toString()
-                                workerEntity = workerEntity.copy(photoUrl = downloadUrl, lastUpdated = System.currentTimeMillis())
+                                val remoteUrl = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                                    storageRef.putBytes(compressedImage)
+                                        .addOnSuccessListener {
+                                            storageRef.downloadUrl
+                                                .addOnSuccessListener { uri ->
+                                                    if (cont.isActive) cont.resumeWith(Result.success(uri.toString()))
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    if (cont.isActive) cont.resumeWith(Result.failure(e))
+                                                }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            if (cont.isActive) cont.resumeWith(Result.failure(e))
+                                        }
+                                }
+                                downloadUrl = remoteUrl
+                                workerEntity = workerEntity.copy(photoUrl = downloadUrl)
                                 repository.saveWorkerProfile(workerEntity)
                             }
                         }
                     } catch (e: Exception) {
-                        syncError = e.message
+                        syncError = e.message ?: "Firebase Sync Failed"
                     }
                 }
 
@@ -230,13 +255,15 @@ class WorkerProfileViewModel @Inject constructor(
                         syncError = e.message
                     }
                 }
-                withContext(Dispatchers.IO) {
-                    try {
-                        context.getSharedPreferences("ResidentProfile_$userId", Context.MODE_PRIVATE).edit()
-                            .putString("name", currentState.fullName)
-                            .putString("phoneNumber", currentState.phoneNumber)
-                            .putString("area", currentState.areaStreet)
-                            .apply()
+                try {
+                    kotlinx.coroutines.withTimeout(5000L) {
+                        withContext(Dispatchers.IO) {
+                            context.getSharedPreferences("ResidentProfile_$userId", Context.MODE_PRIVATE).edit()
+                                .putString("name", currentState.fullName)
+                                .putString("phoneNumber", currentState.phoneNumber)
+                                .putString("area", currentState.areaStreet)
+                                .apply()
+                        }
                         database.reference.child("residents").child(userId).setValue(
                             mapOf(
                                 "id" to userId,
@@ -247,8 +274,8 @@ class WorkerProfileViewModel @Inject constructor(
                                 "updatedAt" to System.currentTimeMillis()
                             )
                         ).await()
-                    } catch (_: Exception) {
                     }
+                } catch (_: Exception) {
                 }
                 _uiState.update { it.copy(
                     message = if (syncError == null) {
@@ -343,7 +370,7 @@ class WorkerProfileViewModel @Inject constructor(
         try {
             val inputStream = context.contentResolver.openInputStream(uri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream) ?: return@withContext null
-            inputStream?.close() ?: return@withContext null
+                inputStream?.close()
 
             var quality = 100
             var byteArray: ByteArray
